@@ -1,0 +1,45 @@
+# Local artifacts
+.planning/
+*.apk
+*_logcat*.txt
+*_kodi*.log
+*_tombstones*.txt
+*_dmm_*
+temp_*.txt
+temp_*.rs
+temp_*.kt
+temp_*.js
+temp_*.ts
+temp_*.proto
+temp.txt
+temp*.txt
+script.trakt/
+copy_to_wsl.sh
+emulator_screen*.png
+emulator_install*.png
+
+# Node / Bridge artifacts
+node_modules/
+stremio-addon/node_modules/
+.env
+.env.*
+!.env.example
+stremio-addon/.env
+stremio-addon/.env.*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Keys/certs (never commit)
+*.pem
+*.key
+*.p12
+*.jks
+*.keystore
+
+# Nested repos (kept as separate git repos, not committed from this wrapper repo)
+xbmc/
+
+# Weird artifact filenames accidentally created by Windows path munging
+C*UsersruizzDocuments*.txt

@@ -1,0 +1,6 @@
+[submodule "stremio-addon"]
+	path = stremio-addon
+	url = https://github.com/ruizkinio/Jumpgate-bridge.git
+[submodule "xbmc"]
+	path = xbmc
+	url = https://github.com/ruizkinio/Jumpgate-kodi.git
