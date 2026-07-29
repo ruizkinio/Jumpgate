@@ -41,8 +41,9 @@ the Android package metadata.
 ### Release Gates
 
 - Target coordinated version: `3.0.0`.
-- Public release remains blocked until production deployment, representative provider
-  and subtitle UAT, repeated external-player lifecycle UAT, stable APK signing, both
-  ABI artifact audits, and clean public repository candidates are complete.
+- The production Bridge is deployed at an immutable audited digest. Public release
+  remains blocked until representative provider/subtitle and repeated external-player
+  lifecycle UAT, stable APK signing, both ABI artifact audits, security triage, and clean
+  public repository candidates are complete.
 
 [Unreleased]: https://github.com/ruizkinio/Jumpgate/commits/main

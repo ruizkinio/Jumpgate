@@ -4,9 +4,10 @@ Jumpgate turns Kodi into a source-aware external player for Stremio. It keeps Ko
 playback engine, settings, skins, local history, and subtitle add-ons while adding a
 private Bridge that carries the selected Stremio source context to the player.
 
-> **Pre-release:** the source-backed overhaul is still completing Android device UAT,
-> production deployment, and release packaging. Do not treat current development APKs
-> or configured addon URLs as a public release.
+> **Pre-release:** the source-backed overhaul is still completing physical Android UAT,
+> security review, stable signing, and coordinated release packaging. The production
+> Bridge is deployed, but current development APKs and configured addon URLs are not a
+> public release.
 
 ## Why Jumpgate
 

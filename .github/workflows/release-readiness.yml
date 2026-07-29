@@ -1,0 +1,79 @@
+name: Coordinated release readiness
+
+on:
+  pull_request:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-candidate:
+    name: Validate candidate metadata
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out coordination tree
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Use Node 24
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install locked release validator dependencies
+        run: npm ci
+      - name: Run negative gate tests
+        run: node --test release/tests/*.test.mjs
+      - name: Validate locked candidate
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node release/validate-release.mjs
+
+  require-ready:
+    name: Require complete release proof
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    needs: validate-candidate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Check out coordination tree
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Use Node 24
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install locked release validator dependencies
+        run: npm ci
+      - name: Install pinned Android signing verifier
+        uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
+        with:
+          packages: build-tools;36.0.0
+      - name: Mint bounded cross-repository audit token
+        id: audit-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.1
+        with:
+          client-id: ${{ secrets.JUMPGATE_AUDIT_APP_CLIENT_ID }}
+          private-key: ${{ secrets.JUMPGATE_AUDIT_APP_PRIVATE_KEY }}
+          owner: ruizkinio
+          repositories: |
+            Jumpgate
+            Jumpgate-bridge
+            Jumpgate-kodi
+          permission-actions: read
+          permission-attestations: read
+          permission-contents: read
+          permission-metadata: read
+          permission-secret-scanning-alerts: read
+          permission-security-events: read
+      - name: Refuse without complete proof
+        env:
+          GITHUB_TOKEN: ${{ steps.audit-token.outputs.token }}
+        run: node release/validate-release.mjs --require-ready

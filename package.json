@@ -1,0 +1,16 @@
+{
+  "name": "jumpgate-release-validation",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.9.0"
+  },
+  "scripts": {
+    "test": "node --test release/tests/*.test.mjs",
+    "validate:release": "node release/validate-release.mjs"
+  },
+  "devDependencies": {
+    "sigstore": "4.1.1"
+  }
+}
