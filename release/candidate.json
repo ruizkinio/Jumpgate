@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 2,
+  "coordinatedVersion": "3.0.0",
+  "components": {
+    "bridge": {
+      "repository": "https://github.com/ruizkinio/Jumpgate-bridge.git",
+      "branch": "main",
+      "commit": "6a48e2088b6815045f477b619b5940664f1e1695",
+      "imageDigest": "sha256:dc3870784a27f3e2849f7b339b055b4faa6ba3b3345a0d85a1e0baf1ee5f5d51",
+      "provenance": {
+        "runUrl": "https://github.com/ruizkinio/Jumpgate-bridge/actions/runs/30500105428",
+        "workflowId": 320575057,
+        "workflowPath": ".github/workflows/fly-deploy.yml",
+        "event": "push",
+        "branch": "main",
+        "headRepository": "ruizkinio/Jumpgate-bridge",
+        "imageArtifact": {
+          "id": 8743173311,
+          "name": "jumpgate-image-6a48e2088b6815045f477b619b5940664f1e1695",
+          "archiveDigest": "sha256:631927b3d993991dfde0dc6f75259adfa0633d4d000e70ad9c61303747441310"
+        },
+        "deploymentAttestationArtifact": {
+          "id": 8743348002,
+          "name": "jumpgate-deployment-attestation-30500105428-1-6a48e2088b6815045f477b619b5940664f1e1695",
+          "archiveDigest": "sha256:3aff3de3c54a67b57163661942058f770f866e89e5d09fc64682d79a8e168265"
+        }
+      }
+    },
+    "kodi": {
+      "repository": "https://github.com/ruizkinio/Jumpgate-kodi.git",
+      "branch": "master",
+      "commit": "35bf6b23f84faff14e9372abe0e6f2fcbb153617",
+      "provenance": {
+        "runUrl": "https://github.com/ruizkinio/Jumpgate-kodi/actions/runs/30253147375",
+        "workflowId": 312418811,
+        "workflowPath": ".github/workflows/jumpgate-android.yml",
+        "event": "push",
+        "branch": "master",
+        "headRepository": "ruizkinio/Jumpgate-kodi"
+      },
+      "artifacts": {
+        "arm64-v8a": {
+          "artifactId": 8648051513,
+          "artifactName": "jumpgate-android-ci-ephemeral-signed-arm64-v8a-35bf6b23f84faff14e9372abe0e6f2fcbb153617",
+          "archiveDigest": "sha256:844bea2f2e7bfca9047b2df57fc88fe66f73b32154881b4d0c9d0b2b853ea0b3",
+          "apkSha256": "09ed1913468502f948f6380b844d229ee960a169921378827395a4ecd0794b52"
+        },
+        "armeabi-v7a": {
+          "artifactId": 8648027227,
+          "artifactName": "jumpgate-android-ci-ephemeral-signed-armeabi-v7a-35bf6b23f84faff14e9372abe0e6f2fcbb153617",
+          "archiveDigest": "sha256:3d3a4424400133a6ac8cd1824028b40168002365dfd8838819133f650fc025ea",
+          "apkSha256": "c348de59478d51e68e2f556c64f399714df5fc179c965bfbe85084fe995d1905"
+        }
+      }
+    }
+  },
+  "stremio": {
+    "repository": "https://github.com/Stremio/stremio-web.git",
+    "releaseTag": "v5.0.0-beta.39",
+    "releaseUrl": "https://github.com/Stremio/stremio-web/releases/tag/v5.0.0-beta.39",
+    "releaseCommit": "94a7be7c11e72bca1f8b7aa44cbdb5755a8cc7e1",
+    "corePackage": "@stremio/stremio-core-web",
+    "coreVersion": "0.59.0",
+    "coreGitHead": "90c38f181d290fc705049e4c8bd30df00f6f3e66",
+    "coreIntegrity": "sha512-vN7r2rjU/C9Xt29cN2Iim5jowXQQCaIdgbbM25Pg5Uj+ZIr17SFNL0lAI8KuDXaEExGPgli7N7V2fBaMegXDpg=="
+  },
+  "physicalUatEvidence": "release/evidence/physical-uat.json",
+  "securityAuditEvidence": "release/evidence/security-audit.json"
+}

@@ -9,7 +9,8 @@ tokens, headers, cookies, provider responses, account names, or pairing codes.
 
 - Bridge commit and immutable image digest match the protected CI run.
 - `/health/live`, `/health/ready`, and `/version` pass on the deployed origin.
-- Kodi commit matches the Bridge fingerprint pin.
+- Kodi and Bridge commits are reachable from their configured public branches and match
+  the coordination candidate gitlinks.
 - APK package, version, ABI, SHA-256, and signer match the verifier output.
 - For package-override diagnostics, the manifest/application ID, generated Java package,
   and native `CCompileInfo::GetPackage()` value are identical to the requested package.
@@ -63,15 +64,17 @@ tokens, headers, cookies, provider responses, account names, or pairing codes.
     discarded after one collection read, connect optional Trakt/TMDB, import providers,
     then install the generated addon in the signed-in Stremio profile.
 14. Confirm install actions remain unavailable before pairing and provider import.
-15. Record the exact Stremio package/version. For supported `2.1.5`, inspect the APK and
-    runtime launch to confirm the normal external-player path remains an implicit
+15. Record the exact public Stremio package/version and prove that its locked
+    `@stremio/stremio-core-web` package contains required Core fix `46091b81`. Inspect the
+    APK and runtime launch to confirm the normal external-player path remains an implicit
     package-less `ACTION_VIEW` with the selected URI, MIME `video/*`, and activity-result
     contract. Exercise representative HTTP(S), playlist, and other supported transport
     schemes; each must resolve Jumpgate, while Android may keep separate scheme-scoped
     preferences. Using a sanitized development fixture only, confirm Stremio's explicit
     `externalUrl`/package path does not provide that result contract and therefore remains
-    unsupported. Any Stremio version or intent-shape change blocks release until this gate
-    and result-bound resume/completion/lifecycle tests pass again.
+    unsupported. A public Stremio release without that Core fix, or any package/version or
+    intent-shape change, blocks release until this gate and result-bound resume/completion/
+    lifecycle tests pass again.
 16. Set Stremio **Settings > Playback > Default player** to **External player**. With
     stock Kodi also installed and no preferred media app, confirm Android lists distinct
     **Jumpgate** and **Kodi** targets. Select Kodi with **Always** for one representative
@@ -197,13 +200,16 @@ Release evidence must include:
 - Green protected Bridge and dual-ABI Android CI URLs.
 - Deployed Bridge digest/readiness/version output with secrets absent.
 - APK SHA-256, package/version/ABI, and signer fingerprint.
+- One stable release signer across both ABI artifacts; ephemeral CI certificates cannot
+  satisfy release evidence.
 - Sanitized result table for every scenario above.
 - Sanitized pairing matrix recording device/build, phase, injected condition, bounded
   elapsed-time result, terminal state, profile-mutation result, and QR-artifact result;
   never record codes, QR images, private URLs/paths, responses, tokens, or profile names.
 - Known provider-specific limitations that do not violate identity/privacy/lifecycle
   invariants.
-- Confirmation that current trees and clean release histories pass gitleaks.
+- Confirmation that current trees and bounded clean release histories pass the documented
+  secret and security-alert audits.
 
 Any frozen pairing dialog, post-cancel profile mutation, redemption accepted at/after
 expiry, premature close before secure commit, stale QR file/texture, or workaround that
