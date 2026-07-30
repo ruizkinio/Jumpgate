@@ -1,5 +1,7 @@
 # Jumpgate
 
+![Jumpgate: Kodi playback with exact Stremio context](assets/jumpgate-social-preview.png)
+
 Jumpgate turns Kodi into a source-aware external player for Stremio. It keeps Kodi's
 playback engine, settings, skins, local history, and subtitle add-ons while adding a
 private Bridge that carries the selected Stremio source context to the player.
