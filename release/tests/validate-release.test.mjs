@@ -23,6 +23,7 @@ import {
   publicRefManifestSha256,
   pullRequestHeadTreeMatchesCandidate,
   readinessBlockers,
+  securityFindingFingerprint,
   validateCandidate,
   validateBridgeDeploymentAttestation,
   validateEvidence,
@@ -130,7 +131,20 @@ function securityAllowlist(entries = []) {
   return { schemaVersion: 1, entries };
 }
 
-function securityAudit(allowlist = securityAllowlist()) {
+function securityFinding(marker = "a") {
+  const record = {
+    rule: "generic-api-key",
+    commit: marker.repeat(40),
+    path: "fixtures/credential-shaped.txt",
+    startLine: 7,
+    endLine: 7,
+    startColumn: 3,
+    endColumn: 24,
+  };
+  return { fingerprint: securityFindingFingerprint(record), ...record };
+}
+
+function securityAudit() {
   const records = Object.entries({
     "ruizkinio/Jumpgate": "all-public-history",
     "ruizkinio/Jumpgate-bridge": "all-public-branches-and-tags",
@@ -145,9 +159,6 @@ function securityAudit(allowlist = securityAllowlist()) {
           auditedRefsSha256: publicRefManifestSha256(upstreamRefs),
         }
       : null;
-    const allowed = allowlist.entries
-      .filter((entry) => entry.repository === repository)
-      .map((entry) => entry.fingerprint);
     return {
       repository,
       scope,
@@ -160,8 +171,8 @@ function securityAudit(allowlist = securityAllowlist()) {
         selection: upstream ? "tip-minus-upstream-public-history" : "reachable-history",
         excludedRefsSha256: upstream?.auditedRefsSha256 ?? null,
       }],
-      rawFindingFingerprints: allowed,
-      allowlistedFindingFingerprints: allowed,
+      rawFindings: [],
+      allowlistedFindingFingerprints: [],
       unresolvedFindingFingerprints: [],
       commands: repository === "ruizkinio/Jumpgate-kodi"
         ? [
@@ -178,7 +189,7 @@ function securityAudit(allowlist = securityAllowlist()) {
     };
   });
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     candidate: {
       bridgeCommit: CANDIDATE_TEMPLATE.components.bridge.commit,
       kodiCommit: CANDIDATE_TEMPLATE.components.kodi.commit,
@@ -684,20 +695,25 @@ test("evidence URLs must be immutable public blobs without ambient data", () => 
 
 test("security audit evidence is scoped, zero-finding, and reproducible", () => {
   const emptyAllowlist = securityAllowlist();
-  const audit = securityAudit(emptyAllowlist);
+  const audit = securityAudit();
   assert.equal(
     validateSecurityAudit(audit, candidate(), TEST_NOW, emptyAllowlist, audit.allowlistSha256),
     audit,
   );
   assert.equal(validateSecurityReport(audit.repositories[0], audit.scanner), audit.repositories[0]);
 
+  const reviewedFinding = securityFinding();
   const reviewed = securityAllowlist([{
     repository: "ruizkinio/Jumpgate",
-    fingerprint: "a".repeat(64),
+    fingerprint: reviewedFinding.fingerprint,
     reason: "Reviewed credential-shaped test fixture with no authority.",
     expiresAt: "2026-08-29T10:00:00Z",
   }]);
-  const allowlistedAudit = securityAudit(reviewed);
+  const allowlistedAudit = securityAudit();
+  allowlistedAudit.repositories[0].rawFindings = [reviewedFinding];
+  allowlistedAudit.repositories[0].allowlistedFindingFingerprints = [
+    reviewedFinding.fingerprint,
+  ];
   assert.equal(
     validateSecurityAudit(
       allowlistedAudit,
@@ -708,10 +724,39 @@ test("security audit evidence is scoped, zero-finding, and reproducible", () => 
     ),
     allowlistedAudit,
   );
+  const contaminatedRecord = structuredClone(allowlistedAudit);
+  contaminatedRecord.repositories[0].rawFindings[0].secret = "must-not-be-present";
+  assert.throws(
+    () => validateSecurityAudit(
+      contaminatedRecord,
+      candidate(),
+      TEST_NOW,
+      reviewed,
+      contaminatedRecord.allowlistSha256,
+    ),
+    /must contain exactly/,
+  );
+  const forgedRecord = structuredClone(allowlistedAudit);
+  forgedRecord.repositories[0].rawFindings[0].path = "fixtures/moved.txt";
+  assert.throws(
+    () => validateSecurityAudit(
+      forgedRecord,
+      candidate(),
+      TEST_NOW,
+      reviewed,
+      forgedRecord.allowlistSha256,
+    ),
+    /must derive from the sanitized location record/,
+  );
 
   const finding = securityAudit();
-  finding.repositories[1].rawFindingFingerprints = ["b".repeat(64)];
-  finding.repositories[1].unresolvedFindingFingerprints = ["b".repeat(64)];
+  const unresolvedFinding = securityFinding("b");
+  finding.repositories[1].rawFindings = [unresolvedFinding];
+  finding.repositories[1].unresolvedFindingFingerprints = [unresolvedFinding.fingerprint];
+  assert.equal(
+    validateSecurityAudit(finding, candidate(), TEST_NOW, emptyAllowlist, finding.allowlistSha256, false),
+    finding,
+  );
   assert.throws(
     () => validateSecurityAudit(finding, candidate(), TEST_NOW),
     /unresolved findings must be zero/,
@@ -1165,6 +1210,10 @@ test("release workflow is pinned, main-only, fixed-runner, and non-publishing", 
   assert.match(workflow, /build-tools;36\.0\.0/);
   assert.match(workflow, /require-ready:[\s\S]*?timeout-minutes: 45/);
   assert.equal((workflow.match(/^\s*run: npm run audit:security$/gm) ?? []).length, 1);
+  assert.equal(
+    (workflow.match(/^\s*run: npm run audit:security:require-clean$/gm) ?? []).length,
+    1,
+  );
   assert.equal((workflow.match(/^\s*run: npm run audit:security:smoke$/gm) ?? []).length, 1);
   assert.match(
     workflow,
@@ -1176,6 +1225,8 @@ test("release workflow is pinned, main-only, fixed-runner, and non-publishing", 
     workflow.indexOf("Reproduce sanitized public-history audit") <
       workflow.indexOf("Upload only the reproduced sanitized audit") &&
       workflow.indexOf("Upload only the reproduced sanitized audit") <
+        workflow.indexOf("Refuse unresolved or stale security findings") &&
+      workflow.indexOf("Refuse unresolved or stale security findings") <
         workflow.indexOf("Mint bounded cross-repository audit token") &&
       workflow.indexOf("Mint bounded cross-repository audit token") <
         workflow.indexOf("Refuse without complete proof"),

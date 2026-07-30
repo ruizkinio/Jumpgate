@@ -21,6 +21,7 @@ import {
   KODI_UPSTREAM_REPOSITORY,
   SECURITY_SCOPES,
   publicRefManifestSha256,
+  securityFindingFingerprint,
   validateSecurityAudit,
 } from "./validate-release.mjs";
 
@@ -386,14 +387,34 @@ export function findingFingerprint(finding) {
     endColumn: findingInteger(finding.EndColumn, "EndColumn", 0),
   };
   if (location.endLine < location.startLine) fail("Gitleaks finding line range is invalid");
-  return sha256(Buffer.from(JSON.stringify(location), "utf8"));
+  return securityFindingFingerprint(location);
+}
+
+function sanitizeFinding(finding) {
+  const fingerprint = findingFingerprint(finding);
+  return {
+    fingerprint,
+    rule: finding.RuleID,
+    commit: finding.Commit.toLowerCase(),
+    path: normalizeFindingPath(finding.File),
+    startLine: finding.StartLine,
+    endLine: finding.EndLine,
+    startColumn: finding.StartColumn,
+    endColumn: finding.EndColumn,
+  };
 }
 
 export function sanitizeFindings(findings) {
   if (!Array.isArray(findings) || findings.length > MAX_FINDINGS) {
     fail("Gitleaks report must be a bounded array");
   }
-  return [...new Set(findings.map(findingFingerprint))].sort();
+  const records = new Map(findings.map((finding) => {
+    const record = sanitizeFinding(finding);
+    return [record.fingerprint, record];
+  }));
+  return [...records.values()].sort((left, right) =>
+    left.fingerprint < right.fingerprint ? -1 : left.fingerprint > right.fingerprint ? 1 : 0,
+  );
 }
 
 function readBoundedFile(path, maximumBytes) {
@@ -536,7 +557,7 @@ function scanRemote(repository, replicaRoot, scannerPath, configPath, ignorePath
   const logOptions = upstream
     ? "--full-history --diff-filter=tuxdb --all --not --glob=refs/jumpgate-audit/upstream/*"
     : "--full-history --diff-filter=tuxdb --all";
-  const rawFindingFingerprints = scanRepository(
+  const rawFindings = scanRepository(
     scannerPath,
     configPath,
     ignorePath,
@@ -557,7 +578,9 @@ function scanRemote(repository, replicaRoot, scannerPath, configPath, ignorePath
     .filter((entry) => entry.repository === repository.slug)
     .map((entry) => entry.fingerprint);
   const allowedSet = new Set(allowed);
-  const unresolved = rawFindingFingerprints.filter((fingerprint) => !allowedSet.has(fingerprint));
+  const unresolved = rawFindings
+    .map((finding) => finding.fingerprint)
+    .filter((fingerprint) => !allowedSet.has(fingerprint));
   const upstreamHash = upstream?.auditedRefsSha256 ?? null;
   return {
     repository: repository.slug,
@@ -566,7 +589,7 @@ function scanRemote(repository, replicaRoot, scannerPath, configPath, ignorePath
     auditedRefsSha256: publicRefManifestSha256(before),
     upstream,
     reviewedRanges: reviewedRanges(before, upstreamHash),
-    rawFindingFingerprints,
+    rawFindings,
     allowlistedFindingFingerprints: allowed,
     unresolvedFindingFingerprints: unresolved,
     commands: reportCommands(repository.slug),
@@ -591,7 +614,7 @@ function generateReplica({ root, archive, completedAt, candidate, allowlist, all
     scanRemote(repository, replicaRoot, scannerPath, configPath, ignorePath, allowlist, env),
   );
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     candidate: {
       bridgeCommit: candidate.components.bridge.commit,
       kodiCommit: candidate.components.kodi.commit,
@@ -618,10 +641,20 @@ function readPolicyJson(path) {
 }
 
 function parseArguments(args) {
-  if (args.length !== 2 || args[0] !== "--output" || !args[1]) {
-    fail("usage: node release/security-audit.mjs --output release/evidence/security-audit.json");
+  if (args.length === 1 && args[0] === "--self-test") {
+    return { mode: "self-test", path: null };
   }
-  return args[1];
+  if (
+    args.length === 2 &&
+    new Set(["--output", "--require-clean"]).has(args[0]) &&
+    args[1]
+  ) {
+    return { mode: args[0].slice(2), path: args[1] };
+  }
+  fail(
+    "usage: node release/security-audit.mjs " +
+      "(--self-test | --output <path> | --require-clean <path>)",
+  );
 }
 
 async function runScannerSelfTest() {
@@ -699,12 +732,13 @@ async function main() {
   if (contaminants.length) {
     fail(`security audit refuses inherited Git/Gitleaks configuration: ${contaminants.join(", ")}`);
   }
-  if (process.argv.length === 3 && process.argv[2] === "--self-test") {
+  const invocation = parseArguments(process.argv.slice(2));
+  if (invocation.mode === "self-test") {
     await runScannerSelfTest();
     return;
   }
   const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-  const output = resolve(root, parseArguments(process.argv.slice(2)));
+  const output = resolve(root, invocation.path);
   const candidate = parseJson(readFileSync(resolve(root, "release/candidate.json")), "candidate");
   const expectedOutput = resolve(root, candidate.securityAuditEvidence);
   if (output !== expectedOutput || !output.startsWith(`${root}${sep}`)) {
@@ -724,6 +758,18 @@ async function main() {
 
   const allowlistPolicy = readPolicyJson(resolve(root, "release/security-allowlist.json"));
   const allowlistSha256 = sha256(allowlistPolicy.bytes);
+  if (invocation.mode === "require-clean") {
+    const report = parseJson(readBoundedFile(output, MAX_REPORT_BYTES), "security audit report");
+    validateSecurityAudit(
+      report,
+      candidate,
+      new Date(),
+      allowlistPolicy.value,
+      allowlistSha256,
+    );
+    console.log("Verified reproduced security audit has no unresolved or stale findings.");
+    return;
+  }
   const completedAt = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
   const archive = await downloadPinnedArchive();
   const auditRoot = mkdtempSync(resolve(tmpdir(), "jumpgate-security-audit-"));
@@ -749,25 +795,22 @@ async function main() {
     if (!firstBytes.equals(secondBytes)) {
       fail("independent security audit replicas did not produce identical sanitized reports");
     }
-    mkdirSync(dirname(output), { recursive: true });
-    writeFileSync(output, firstBytes, { mode: 0o600 });
-    const unresolved = first.repositories.flatMap((record) =>
-      record.unresolvedFindingFingerprints.map((fingerprint) => `${record.repository}:${fingerprint}`),
-    );
-    if (unresolved.length) {
-      fail(
-        `security audit found unresolved fingerprints in ${output}:\n${unresolved.join("\n")}`,
-      );
-    }
     validateSecurityAudit(
       first,
       candidate,
       new Date(completedAt),
       allowlistPolicy.value,
       allowlistSha256,
+      false,
     );
+    mkdirSync(dirname(output), { recursive: true });
+    writeFileSync(output, firstBytes, { mode: 0o600 });
     const counts = first.repositories
-      .map((record) => `${record.repository}=${record.rawFindingFingerprints.length}`)
+      .map(
+        (record) =>
+          `${record.repository}=${record.rawFindings.length} ` +
+          `(unresolved=${record.unresolvedFindingFingerprints.length})`,
+      )
       .join(", ");
     console.log(`Reproduced sanitized Jumpgate security audit (${counts}).`);
   } finally {

@@ -8,6 +8,7 @@
   },
   "scripts": {
     "audit:security": "node release/security-audit.mjs --output release/evidence/security-audit.json",
+    "audit:security:require-clean": "node release/security-audit.mjs --require-clean release/evidence/security-audit.json",
     "audit:security:smoke": "node release/security-audit.mjs --self-test",
     "test": "node --test release/tests/*.test.mjs",
     "validate:release": "node release/validate-release.mjs"

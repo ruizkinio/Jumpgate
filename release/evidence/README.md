@@ -40,11 +40,13 @@ public history. Kodi records a reviewed range for every public head and tag and 
 only commits not reachable from the exact simultaneously captured official `xbmc/xbmc`
 public refs. Added, removed, moved, or retagged refs invalidate the report.
 
-Findings are reduced immediately to SHA-256 fingerprints over rule ID, commit, normalized
-repository-relative path, and line/column location. Secret text, matches, source excerpts,
-authors, emails, raw reports, clones, and patches remain in private temporary directories
-and are deleted. Two fresh clones must produce byte-identical sanitized reports. Only
-that reproduced report is uploaded as an Actions artifact.
+Findings are reduced immediately to sanitized records containing only a SHA-256
+fingerprint, rule ID, public commit, normalized repository-relative path, and line/column
+location. Secret text, matches, source excerpts, authors, emails, raw reports, clones,
+and patches remain in private temporary directories and are deleted. Two fresh clones
+must produce byte-identical sanitized reports. Only that reproduced report is uploaded
+as an Actions artifact. A separate step then refuses unresolved or stale findings, so a
+failed audit remains reviewable without weakening the zero-unresolved release gate.
 
 `release/security-allowlist.json` is the sole allowlist. Every entry must identify an
 observed fingerprint, include a sanitized review rationale, and be unexpired. Missing,

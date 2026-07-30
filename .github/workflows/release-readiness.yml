@@ -68,6 +68,8 @@ jobs:
           if-no-files-found: error
           retention-days: 30
           compression-level: 9
+      - name: Refuse unresolved or stale security findings
+        run: npm run audit:security:require-clean
       - name: Mint bounded cross-repository audit token
         id: audit-token
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.1
