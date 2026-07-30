@@ -51,7 +51,7 @@ export const COMPONENT_POLICIES = Object.freeze({
         sha256: "b594218d0650290789fbe97f64bd29da217c73c1c06a9e12002df9cbd12cfb23",
       }),
     ]),
-    requiredPullRequests: Object.freeze([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]),
+    requiredPullRequests: Object.freeze([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]),
   }),
   kodi: Object.freeze({
     repository: "https://github.com/ruizkinio/Jumpgate-kodi.git",
