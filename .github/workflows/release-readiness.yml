@@ -27,6 +27,8 @@ jobs:
         run: npm ci
       - name: Run negative gate tests
         run: node --test release/tests/*.test.mjs
+      - name: Exercise the pinned scanner in a private synthetic repository
+        run: npm run audit:security:smoke
       - name: Validate locked candidate
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -37,7 +39,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     needs: validate-candidate
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 45
     permissions:
       contents: read
     steps:
@@ -56,6 +58,16 @@ jobs:
         uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
         with:
           packages: build-tools;36.0.0
+      - name: Reproduce sanitized public-history audit
+        run: npm run audit:security
+      - name: Upload only the reproduced sanitized audit
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: jumpgate-security-audit-${{ github.sha }}
+          path: release/evidence/security-audit.json
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 9
       - name: Mint bounded cross-repository audit token
         id: audit-token
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.1
