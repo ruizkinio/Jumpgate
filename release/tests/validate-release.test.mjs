@@ -12,24 +12,24 @@ import {
   REQUIRED_UAT_CASES,
   STREMIO_RELEASE_POLICY,
   commitContainsAncestor,
-  coreContainsRequiredFix,
   extractZipEntry,
   parseAapt2Badging,
   parseApkSignerCertificate,
   parseEvidenceBlobUrl,
   parseGithubActionsRunUrl,
-  parseLockedCoreDependency,
   parseZipEntries,
   publicRefManifestSha256,
   pullRequestHeadTreeMatchesCandidate,
   readinessBlockers,
   securityFindingFingerprint,
+  stremioCandidateSha256,
+  validateApkNativeAbi,
   validateCandidate,
   validateBridgeDeploymentAttestation,
   validateEvidence,
   validateGitlinks,
   validateKodiApkManifest,
-  validateNpmProvenance,
+  validateStremioApkManifest,
   validateSecurityAudit,
   validateSecurityAllowlist,
   validateSecurityReport,
@@ -56,32 +56,37 @@ function candidate() {
 
 function physicalEvidence() {
   const locked = candidate();
-  const run = (deviceClass, manufacturer, model, abi, marker) => ({
-    deviceClass,
-    manufacturer,
-    model,
-    androidApi: 35,
-    abi,
-    testedAt: "2026-07-28T18:00:00Z",
-    apkSha256: locked.components.kodi.artifacts[abi].apkSha256,
-    signerSha256: TEST_SIGNER_SHA256,
-    stremioPackageName: "com.stremio.one",
-    stremioVersionName: "2.1.5",
-    stremioVersionCode: 2115001,
-    evidenceSha256: marker.repeat(64),
-    evidenceUrl:
-      `https://github.com/ruizkinio/Jumpgate/blob/${marker.repeat(40)}/release/evidence/${deviceClass}.json`,
-    caseCount: REQUIRED_UAT_CASES.length,
-  });
+  const run = (deviceClass, manufacturer, model, abi, marker) => {
+    const app = locked.stremio.apps[deviceClass === "phone" ? "mobile" : "tv"];
+    const stremioArtifact = app.artifacts[abi];
+    return {
+      deviceClass,
+      manufacturer,
+      model,
+      androidApi: 35,
+      abi,
+      testedAt: "2026-07-28T18:00:00Z",
+      jumpgateApkSha256: locked.components.kodi.artifacts[abi].apkSha256,
+      jumpgateSignerSha256: TEST_SIGNER_SHA256,
+      stremioPackageName: locked.stremio.packageName,
+      stremioVersionName: app.versionName,
+      stremioVersionCode: stremioArtifact.versionCode,
+      stremioApkSha256: stremioArtifact.apkSha256,
+      stremioSignerSha256: locked.stremio.signerCertificateSha256,
+      evidenceSha256: marker.repeat(64),
+      evidenceUrl:
+        `https://github.com/ruizkinio/Jumpgate/blob/${marker.repeat(40)}/release/evidence/${deviceClass}.json`,
+      caseCount: REQUIRED_UAT_CASES.length,
+    };
+  };
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     candidate: {
       coordinatedVersion: locked.coordinatedVersion,
       bridgeCommit: locked.components.bridge.commit,
       bridgeImageDigest: locked.components.bridge.imageDigest,
       kodiCommit: locked.components.kodi.commit,
-      stremioReleaseCommit: locked.stremio.releaseCommit,
-      stremioCoreGitHead: locked.stremio.coreGitHead,
+      stremioCandidateSha256: stremioCandidateSha256(locked.stremio),
     },
     runs: [
       run("phone", "Google", "Pixel 9", "arm64-v8a", "a"),
@@ -92,14 +97,13 @@ function physicalEvidence() {
 
 function uatReport(run, locked = candidate()) {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     candidate: {
       coordinatedVersion: locked.coordinatedVersion,
       bridgeCommit: locked.components.bridge.commit,
       bridgeImageDigest: locked.components.bridge.imageDigest,
       kodiCommit: locked.components.kodi.commit,
-      stremioReleaseCommit: locked.stremio.releaseCommit,
-      stremioCoreGitHead: locked.stremio.coreGitHead,
+      stremioCandidateSha256: stremioCandidateSha256(locked.stremio),
     },
     device: {
       deviceClass: run.deviceClass,
@@ -107,11 +111,13 @@ function uatReport(run, locked = candidate()) {
       model: run.model,
       androidApi: run.androidApi,
       abi: run.abi,
-      apkSha256: run.apkSha256,
-      signerSha256: run.signerSha256,
+      jumpgateApkSha256: run.jumpgateApkSha256,
+      jumpgateSignerSha256: run.jumpgateSignerSha256,
       stremioPackageName: run.stremioPackageName,
       stremioVersionName: run.stremioVersionName,
       stremioVersionCode: run.stremioVersionCode,
+      stremioApkSha256: run.stremioApkSha256,
+      stremioSignerSha256: run.stremioSignerSha256,
     },
     testedAt: run.testedAt,
     bridge: {
@@ -233,83 +239,6 @@ function storedZip(name, body) {
   return Buffer.concat([local, nameBytes, bytes, central, nameBytes, end]);
 }
 
-function npmSlsaStatement(stremio, tarballSha512) {
-  const ref = `refs/tags/stremio-core-web-v${stremio.coreVersion}`;
-  return {
-    _type: "https://in-toto.io/Statement/v1",
-    subject: [
-      {
-        name: `pkg:npm/%40stremio/stremio-core-web@${stremio.coreVersion}`,
-        digest: { sha512: tarballSha512 },
-      },
-    ],
-    predicateType: "https://slsa.dev/provenance/v1",
-    predicate: {
-      buildDefinition: {
-        buildType: "https://slsa-framework.github.io/github-actions-buildtypes/workflow/v1",
-        externalParameters: {
-          workflow: {
-            ref,
-            repository: "https://github.com/Stremio/stremio-core",
-            path: ".github/workflows/publish.yml",
-          },
-        },
-        internalParameters: {
-          github: {
-            event_name: "release",
-            repository_id: "163698806",
-            repository_owner_id: "13152917",
-          },
-        },
-        resolvedDependencies: [
-          {
-            uri: `git+https://github.com/Stremio/stremio-core@${ref}`,
-            digest: { gitCommit: stremio.coreGitHead },
-          },
-        ],
-      },
-      runDetails: {
-        builder: { id: "https://github.com/actions/runner/github-hosted" },
-        metadata: {
-          invocationId:
-            "https://github.com/Stremio/stremio-core/actions/runs/27526289973/attempts/1",
-        },
-      },
-    },
-  };
-}
-
-function npmAttestations(statement) {
-  return {
-    attestations: [
-      {
-        predicateType: "https://github.com/npm/attestation/tree/main/specs/publish/v0.1",
-        bundle: {},
-      },
-      {
-        predicateType: "https://slsa.dev/provenance/v1",
-        bundle: {
-          mediaType: "application/vnd.dev.sigstore.bundle.v0.3+json",
-          verificationMaterial: {
-            certificate: { rawBytes: "Y2VydGlmaWNhdGU=" },
-            tlogEntries: [
-              {
-                inclusionPromise: { signedEntryTimestamp: "cHJvbWlzZQ==" },
-                inclusionProof: { rootHash: "cHJvb2Y=" },
-              },
-            ],
-          },
-          dsseEnvelope: {
-            payload: Buffer.from(JSON.stringify(statement)).toString("base64"),
-            payloadType: "application/vnd.in-toto+json",
-            signatures: [{ sig: "c2lnbmF0dXJl" }],
-          },
-        },
-      },
-    ],
-  };
-}
-
 test("candidate metadata is schema-checked rather than hardcoded to one commit", () => {
   const value = candidate();
   value.components.bridge.commit = "1".repeat(40);
@@ -338,9 +267,12 @@ test("candidate repositories, protected-run identity, and artifact metadata fail
 });
 
 test("candidate metadata cannot override release security policy", () => {
+  assert.equal(STREMIO_RELEASE_POLICY.packageName, "com.stremio.one");
+  assert.equal(STREMIO_RELEASE_POLICY.apps.mobile.versionName, "2.3.2");
+  assert.equal(STREMIO_RELEASE_POLICY.apps.tv.versionName, "1.10.4");
   assert.equal(
-    STREMIO_RELEASE_POLICY.requiredCoreFix,
-    "46091b81ec6865fc1bb6e1d056409b78482cfc61",
+    STREMIO_RELEASE_POLICY.signerCertificateSha256,
+    "7e6a979c968f771e3fbcf2c2e8718ce61e708d87caf91fc13e2d4c19a8022c6b",
   );
   assert.equal(KODI_RELEASE_POLICY.apkManifest.applicationId, "io.github.ruizkinio.jumpgate");
   assert.deepEqual(KODI_RELEASE_POLICY.signer, {
@@ -348,9 +280,13 @@ test("candidate metadata cannot override release security policy", () => {
     certificateSha256: null,
   });
 
-  const selectedCoreFix = candidate();
-  selectedCoreFix.stremio.requiredCoreFix = "0".repeat(40);
-  assert.throws(() => validateCandidate(selectedCoreFix), /must contain exactly/);
+  const unsupportedMobile = candidate();
+  unsupportedMobile.stremio.apps.mobile.versionName = "2.1.5";
+  assert.throws(() => validateCandidate(unsupportedMobile), /policy-locked native Android baseline/);
+
+  const selectedStremioSigner = candidate();
+  selectedStremioSigner.stremio.signerCertificateSha256 = "0".repeat(64);
+  assert.throws(() => validateCandidate(selectedStremioSigner), /policy-locked Stremio signer/);
 
   const selectedApplicationId = candidate();
   selectedApplicationId.components.kodi.packageName = "org.example.forged";
@@ -389,22 +325,19 @@ test("gitlinks fail closed on a component mismatch", () => {
   assert.throws(() => validateGitlinks(value, links), /xbmc gitlink/);
 });
 
-test("Web package and lock must agree on the exact core dependency", () => {
-  const value = candidate();
-  const packageJson = {
-    version: value.stremio.releaseTag.slice(1),
-    dependencies: { [value.stremio.corePackage]: value.stremio.coreVersion },
-  };
-  const lock = [
-    "importers:",
-    "",
-    "  .:",
-    "    dependencies:",
-    `      '${value.stremio.corePackage}':`,
-    `        specifier: ${value.stremio.coreVersion}`,
-    "        version: 99.0.0",
-  ].join("\n");
-  assert.throws(() => parseLockedCoreDependency(packageJson, lock, value.stremio), /does not pin/);
+test("Stremio native artifacts require exact official versioned URLs and ABI metadata", () => {
+  const wrongHost = candidate();
+  wrongHost.stremio.apps.mobile.artifacts["arm64-v8a"].downloadUrl =
+    "https://example.invalid/stremio.apk";
+  assert.throws(() => validateCandidate(wrongHost), /exact official versioned APK URL/);
+
+  const wrongAbi = candidate();
+  wrongAbi.stremio.apps.tv.artifacts["armeabi-v7a"].abi = "arm64-v8a";
+  assert.throws(() => validateCandidate(wrongAbi), /must match its artifact key/);
+
+  const query = candidate();
+  query.stremio.apps.tv.artifacts["arm64-v8a"].downloadUrl += "?mirror=1";
+  assert.throws(() => validateCandidate(query), /exact official versioned APK URL/);
 });
 
 test("only ancestor or identical commits satisfy public reachability", () => {
@@ -421,7 +354,6 @@ test("only ancestor or identical commits satisfy public reachability", () => {
   diverged.status = "diverged";
   diverged.merge_base_commit.sha = "0".repeat(40);
   assert.equal(commitContainsAncestor(diverged, ancestor, descendant), false);
-  assert.equal(coreContainsRequiredFix(diverged, ancestor, descendant), false);
 });
 
 test("release-critical Kodi PR requires exact candidate and PR head tree equality", () => {
@@ -575,7 +507,7 @@ test("audited component executable closures are exact and reject byte or policy 
   );
 });
 
-test("build-tools output locks actual Kodi package and versions", () => {
+test("build-tools and ZIP output lock Jumpgate and Stremio APK identities", () => {
   const output = [
     "package: name='io.github.ruizkinio.jumpgate' versionCode='2200300' versionName='22.0-ALPHA2-Jumpgate-3.0.0' compileSdkVersion='35'",
     "sdkVersion:'24'",
@@ -607,6 +539,35 @@ test("build-tools output locks actual Kodi package and versions", () => {
       ),
     /exactly one/,
   );
+
+  const locked = candidate();
+  const mobile = locked.stremio.apps.mobile;
+  const mobileArm64 = mobile.artifacts["arm64-v8a"];
+  const stremioManifest = parseAapt2Badging(
+    `package: name='com.stremio.one' versionCode='${mobileArm64.versionCode}' ` +
+      `versionName='${mobile.versionName}' compileSdkVersion='36'`,
+  );
+  assert.equal(
+    validateStremioApkManifest(stremioManifest, locked.stremio, mobile, mobileArm64),
+    stremioManifest,
+  );
+  assert.throws(
+    () =>
+      validateStremioApkManifest(
+        { ...stremioManifest, versionCode: mobileArm64.versionCode + 1 },
+        locked.stremio,
+        mobile,
+        mobileArm64,
+      ),
+    /Stremio APK manifest/,
+  );
+
+  const arm64Apk = storedZip("lib/arm64-v8a/libstremio.so", "native");
+  assert.equal(validateApkNativeAbi(arm64Apk, "arm64-v8a", "Stremio APK"), "arm64-v8a");
+  assert.throws(
+    () => validateApkNativeAbi(arm64Apk, "armeabi-v7a", "Stremio APK"),
+    /does not match/,
+  );
 });
 
 test("physical evidence requires fresh distinct devices and locked ABI artifacts", () => {
@@ -626,7 +587,7 @@ test("physical evidence requires fresh distinct devices and locked ABI artifacts
   );
 
   const wrongApk = physicalEvidence();
-  wrongApk.runs[1].apkSha256 = "0".repeat(64);
+  wrongApk.runs[1].jumpgateApkSha256 = "0".repeat(64);
   assert.throws(
     () => validateEvidence(wrongApk, candidate(), TEST_NOW, TEST_RELEASE_SIGNER_POLICY),
     /locked armeabi-v7a APK/,
@@ -641,10 +602,17 @@ test("physical evidence requires fresh distinct devices and locked ABI artifacts
   );
 
   const wrongSigner = physicalEvidence();
-  wrongSigner.runs[0].signerSha256 = "a".repeat(64);
+  wrongSigner.runs[0].jumpgateSignerSha256 = "a".repeat(64);
   assert.throws(
     () => validateEvidence(wrongSigner, candidate(), TEST_NOW, TEST_RELEASE_SIGNER_POLICY),
     /policy-locked Kodi release signer/,
+  );
+
+  const wrongStremio = physicalEvidence();
+  wrongStremio.runs[0].stremioVersionName = "2.1.5";
+  assert.throws(
+    () => validateEvidence(wrongStremio, candidate(), TEST_NOW, TEST_RELEASE_SIGNER_POLICY),
+    /exact locked Stremio mobile arm64-v8a APK/,
   );
 });
 
@@ -830,142 +798,6 @@ test("security audit evidence is scoped, zero-finding, and reproducible", () => 
   );
 });
 
-test("npm SLSA provenance verifies cryptographically before exact statement validation", async () => {
-  const stremio = candidate().stremio;
-  const tarballSha512 = "a".repeat(128);
-  const statement = npmSlsaStatement(stremio, tarballSha512);
-  const attestations = npmAttestations(statement);
-  let verifiedBundle;
-  let verifiedPolicy;
-  const verifier = async (bundle, policy) => {
-    verifiedBundle = bundle;
-    verifiedPolicy = policy;
-  };
-
-  assert.deepEqual(
-    await validateNpmProvenance(attestations, stremio, tarballSha512, verifier),
-    statement,
-  );
-  assert.equal(verifiedBundle, attestations.attestations[1].bundle);
-  assert.equal(verifiedPolicy.certificateIssuer, "https://token.actions.githubusercontent.com");
-  assert.equal(
-    verifiedPolicy.certificateIdentityURI,
-    "^https://github\\.com/Stremio/stremio-core/\\.github/workflows/publish\\.yml@refs/tags/stremio-core-web-v0\\.59\\.0$",
-  );
-  assert.deepEqual(verifiedPolicy.certificateOIDs, {
-    "1.3.6.1.4.1.57264.1.2": "release",
-    "1.3.6.1.4.1.57264.1.3": stremio.coreGitHead,
-    "1.3.6.1.4.1.57264.1.4": "Publish",
-    "1.3.6.1.4.1.57264.1.5": "Stremio/stremio-core",
-    "1.3.6.1.4.1.57264.1.6": "refs/tags/stremio-core-web-v0.59.0",
-  });
-  assert.equal(verifiedPolicy.tlogThreshold, 1);
-  assert.equal(verifiedPolicy.ctLogThreshold, 1);
-  assert.equal(verifiedPolicy.timeout, 5_000);
-  assert.match(verifiedPolicy.tufCachePath, /jumpgate-sigstore-tuf-v1$/);
-});
-
-test("npm SLSA payload parsing is not reached when signature verification rejects", async () => {
-  const stremio = candidate().stremio;
-  const tarballSha512 = "a".repeat(128);
-  const attestations = npmAttestations(npmSlsaStatement(stremio, tarballSha512));
-  const envelope = attestations.attestations[1].bundle.dsseEnvelope;
-  Object.defineProperty(envelope, "payload", {
-    enumerable: true,
-    get() {
-      throw new Error("payload parsed before verification");
-    },
-  });
-  let verifierCalled = false;
-  await assert.rejects(
-    validateNpmProvenance(attestations, stremio, tarballSha512, async () => {
-      verifierCalled = true;
-      throw new Error("signature verification rejected");
-    }),
-    /signature verification rejected/,
-  );
-  assert.equal(verifierCalled, true);
-});
-
-test("npm SLSA provenance requires the complete Sigstore v0.3 bundle shape", async () => {
-  const stremio = candidate().stremio;
-  const tarballSha512 = "a".repeat(128);
-  const verifier = async () => {};
-  const mutations = [
-    (bundle) => {
-      bundle.mediaType = "application/vnd.dev.sigstore.bundle.v0.2+json";
-    },
-    (bundle) => {
-      bundle.dsseEnvelope.signatures.push({ sig: "c2Vjb25k" });
-    },
-    (bundle) => {
-      delete bundle.verificationMaterial.certificate;
-    },
-    (bundle) => {
-      bundle.verificationMaterial.tlogEntries.push(
-        structuredClone(bundle.verificationMaterial.tlogEntries[0]),
-      );
-    },
-    (bundle) => {
-      delete bundle.verificationMaterial.tlogEntries[0].inclusionPromise;
-    },
-    (bundle) => {
-      delete bundle.verificationMaterial.tlogEntries[0].inclusionProof;
-    },
-  ];
-  for (const mutate of mutations) {
-    const attestations = npmAttestations(npmSlsaStatement(stremio, tarballSha512));
-    mutate(attestations.attestations[1].bundle);
-    await assert.rejects(
-      validateNpmProvenance(attestations, stremio, tarballSha512, verifier),
-    );
-  }
-});
-
-test("npm SLSA provenance rejects duplicate attestations and statement identity drift", async () => {
-  const stremio = candidate().stremio;
-  const tarballSha512 = "a".repeat(128);
-  const verifier = async () => {};
-  const duplicate = npmAttestations(npmSlsaStatement(stremio, tarballSha512));
-  duplicate.attestations.push(structuredClone(duplicate.attestations[1]));
-  await assert.rejects(
-    validateNpmProvenance(duplicate, stremio, tarballSha512, verifier),
-    /exactly one SLSA v1 attestation/,
-  );
-
-  const mutations = [
-    (value) => {
-      value.extra = true;
-    },
-    (value) => {
-      value.predicate.buildDefinition.buildType = "https://example.invalid/build";
-    },
-    (value) => {
-      value.predicate.buildDefinition.externalParameters.workflow.ref = "refs/heads/main";
-    },
-    (value) => {
-      value.predicate.buildDefinition.internalParameters.github.event_name = "push";
-    },
-    (value) => {
-      value.predicate.buildDefinition.resolvedDependencies[0].digest.gitCommit = "0".repeat(40);
-    },
-    (value) => {
-      value.predicate.runDetails.builder.id = "https://example.invalid/runner";
-    },
-    (value) => {
-      value.predicate.runDetails.metadata.invocationId =
-        "https://github.com/Other/repository/actions/runs/1/attempts/1";
-    },
-  ];
-  for (const mutate of mutations) {
-    const drifted = npmSlsaStatement(stremio, tarballSha512);
-    mutate(drifted);
-    await assert.rejects(
-      validateNpmProvenance(npmAttestations(drifted), stremio, tarballSha512, verifier),
-    );
-  }
-});
-
 test("ZIP verification rejects traversal and extracts only bounded declared entries", () => {
   const archive = storedZip("artifact.apk", "verified bytes");
   const entries = parseZipEntries(archive);
@@ -1127,7 +959,7 @@ test("readiness derives every publication proof independently", () => {
   assert.deepEqual(
     readinessBlockers({
       candidate: value,
-      coreContainsFix: false,
+      stremioArtifactProof: false,
       physicalEvidence: null,
       securityAudit: null,
       liveSecurityProof: false,
@@ -1139,7 +971,7 @@ test("readiness derives every publication proof independently", () => {
       "required component pull requests are not merged into the candidate: Kodi#5",
       "the Kodi release signer is explicitly not yet provisioned; current APKs are ephemeral",
       "the deployed Bridge digest lacks a candidate-bound deployment attestation artifact",
-      "the configured public Stremio release does not contain the required core fix",
+      "the locked Stremio APK bytes, manifests, ABI sets, and signing certificate have not been independently verified",
       "sanitized physical phone and TV UAT evidence is absent",
       "bounded secret/history audit evidence is absent",
     ],
@@ -1148,7 +980,7 @@ test("readiness derives every publication proof independently", () => {
   assert.deepEqual(
     readinessBlockers({
       candidate: value,
-      coreContainsFix: true,
+      stremioArtifactProof: true,
       physicalEvidence: physicalEvidence(),
       securityAudit: securityAudit(),
       liveSecurityProof: true,
@@ -1235,14 +1067,14 @@ test("release workflow is pinned, main-only, fixed-runner, and non-publishing", 
   assert.equal((workflow.match(/^\s*cache: npm$/gm) ?? []).length, 2);
 });
 
-test("release validator uses an exact locked Sigstore dependency", () => {
+test("release validator has no obsolete Stremio Web provenance dependency", () => {
   const packageJson = JSON.parse(
     readFileSync(new URL("../../package.json", import.meta.url), "utf8"),
   );
   const packageLock = JSON.parse(
     readFileSync(new URL("../../package-lock.json", import.meta.url), "utf8"),
   );
-  assert.deepEqual(packageJson.devDependencies, { sigstore: "4.1.1" });
-  assert.equal(packageLock.packages[""].devDependencies.sigstore, "4.1.1");
-  assert.equal(packageLock.packages["node_modules/sigstore"].version, "4.1.1");
+  assert.equal(packageJson.devDependencies, undefined);
+  assert.equal(packageLock.packages[""].devDependencies, undefined);
+  assert.equal(packageLock.packages["node_modules/sigstore"], undefined);
 });

@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "coordinatedVersion": "3.0.0",
   "components": {
     "bridge": {
@@ -55,14 +55,46 @@
     }
   },
   "stremio": {
-    "repository": "https://github.com/Stremio/stremio-web.git",
-    "releaseTag": "v5.0.0-beta.39",
-    "releaseUrl": "https://github.com/Stremio/stremio-web/releases/tag/v5.0.0-beta.39",
-    "releaseCommit": "94a7be7c11e72bca1f8b7aa44cbdb5755a8cc7e1",
-    "corePackage": "@stremio/stremio-core-web",
-    "coreVersion": "0.59.0",
-    "coreGitHead": "90c38f181d290fc705049e4c8bd30df00f6f3e66",
-    "coreIntegrity": "sha512-vN7r2rjU/C9Xt29cN2Iim5jowXQQCaIdgbbM25Pg5Uj+ZIr17SFNL0lAI8KuDXaEExGPgli7N7V2fBaMegXDpg=="
+    "packageName": "com.stremio.one",
+    "signerCertificateSha256": "7e6a979c968f771e3fbcf2c2e8718ce61e708d87caf91fc13e2d4c19a8022c6b",
+    "apps": {
+      "mobile": {
+        "deviceClass": "phone",
+        "versionName": "2.3.2",
+        "artifacts": {
+          "arm64-v8a": {
+            "abi": "arm64-v8a",
+            "versionCode": 7145730,
+            "downloadUrl": "https://dl.strem.io/android/v2.3.2-android/com.stremio.one-2.3.2-7145730-arm64-v8a.apk",
+            "apkSha256": "b5ad3fef7f47a37c30e578252368a8c16f886186bf4157f095dcd32358e6c91d"
+          },
+          "armeabi-v7a": {
+            "abi": "armeabi-v7a",
+            "versionCode": 5048578,
+            "downloadUrl": "https://dl.strem.io/android/v2.3.2-android/com.stremio.one-2.3.2-5048578-armeabi-v7a.apk",
+            "apkSha256": "fb79f0d1398c2422819173e85a1b6d6d68543e1fc9cf24a5ffd724bb63903235"
+          }
+        }
+      },
+      "tv": {
+        "deviceClass": "tv",
+        "versionName": "1.10.4",
+        "artifacts": {
+          "arm64-v8a": {
+            "abi": "arm64-v8a",
+            "versionCode": 33145732,
+            "downloadUrl": "https://dl.strem.io/android/v1.10.4-androidTV/com.stremio.one-1.10.4-33145732-arm64-v8a.apk",
+            "apkSha256": "caaf4faba423a47c3174eda08b94057956ce32af616c6377b3485f4f5dec993c"
+          },
+          "armeabi-v7a": {
+            "abi": "armeabi-v7a",
+            "versionCode": 31048580,
+            "downloadUrl": "https://dl.strem.io/android/v1.10.4-androidTV/com.stremio.one-1.10.4-31048580-armeabi-v7a.apk",
+            "apkSha256": "e18a5405bb53e12a903ff477457318b8f8d3c8e1995e0a4c3ff5d8893d1ccf0b"
+          }
+        }
+      }
+    }
   },
   "physicalUatEvidence": "release/evidence/physical-uat.json",
   "securityAuditEvidence": "release/evidence/security-audit.json"

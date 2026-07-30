@@ -79,7 +79,9 @@ tokens, headers, cookies, provider responses, account names, or pairing codes.
 14. [`installation-and-pairing/install-gated-before-ready`] Confirm install actions remain
     unavailable before pairing and provider import.
 15. [`installation-and-pairing/stremio-result-contract`] Record the exact public Stremio
-    package/version. For supported Android Mobile `2.3.2` and Android TV `1.10.4`, inspect
+    package, version name/code, ABI, APK SHA-256, and signing-certificate SHA-256. These
+    values must match the device-class and ABI-specific candidate artifact. For supported
+    Android Mobile `2.3.2` and Android TV `1.10.4`, inspect
     the native APK and runtime launch to confirm the normal external-player path remains an
     implicit package-less `ACTION_VIEW` with the selected URI, MIME `video/*`, and
     activity-result contract. Confirm player-screen disposal calls
