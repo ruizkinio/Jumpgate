@@ -1135,17 +1135,21 @@ export function pullRequestHeadTreeMatchesCandidate(
   candidateGitCommit,
   pullHeadGitCommit,
   policy,
+  mergeCompare,
 ) {
   const candidateTree = candidateGitCommit?.tree?.sha;
   const pullHeadTree = pullHeadGitCommit?.tree?.sha;
+  const mergeCommit = pull?.merge_commit_sha;
   return Boolean(
     pull?.number === policy.releaseCriticalPullRequest &&
       pull.merged_at &&
+      /^[0-9a-f]{40}$/.test(mergeCommit ?? "") &&
       pull.base?.ref === policy.branch &&
       pull.base?.repo?.full_name === policy.slug &&
       pull.head?.repo?.full_name === policy.slug &&
       pull.head?.sha === pullHeadGitCommit?.sha &&
       component.commit === candidateGitCommit?.sha &&
+      commitContainsAncestor(mergeCompare, mergeCommit, component.commit) &&
       /^[0-9a-f]{40}$/.test(candidateTree ?? "") &&
       candidateTree === pullHeadTree,
   );
@@ -1157,13 +1161,15 @@ async function releaseCriticalPullRequestMissing(component, policy, name) {
   const pull = await fetchJson(`https://api.github.com/repos/${policy.slug}/pulls/${number}`);
   if (
     !pull?.merged_at ||
-    !/^[0-9a-f]{40}$/.test(pull.head?.sha ?? "")
+    !/^[0-9a-f]{40}$/.test(pull.head?.sha ?? "") ||
+    !/^[0-9a-f]{40}$/.test(pull.merge_commit_sha ?? "")
   ) {
     return `${name}#${number}`;
   }
-  const [candidateGitCommit, pullHeadGitCommit] = await Promise.all([
+  const [candidateGitCommit, pullHeadGitCommit, mergeCompare] = await Promise.all([
     fetchJson(`https://api.github.com/repos/${policy.slug}/git/commits/${component.commit}`),
     fetchJson(`https://api.github.com/repos/${policy.slug}/git/commits/${pull.head.sha}`),
+    githubCompare(policy.slug, pull.merge_commit_sha, component.commit),
   ]);
   return pullRequestHeadTreeMatchesCandidate(
     pull,
@@ -1171,6 +1177,7 @@ async function releaseCriticalPullRequestMissing(component, policy, name) {
     candidateGitCommit,
     pullHeadGitCommit,
     policy,
+    mergeCompare,
   )
     ? null
     : `${name}#${number}`;
