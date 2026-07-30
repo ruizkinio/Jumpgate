@@ -590,6 +590,15 @@ test("physical evidence requires fresh distinct devices and locked ABI artifacts
   );
 });
 
+test("the public UAT protocol documents every stable evidence case exactly once", () => {
+  const protocol = readFileSync(new URL("../../docs/UAT.md", import.meta.url), "utf8");
+  const documented = [...protocol.matchAll(/\[`([a-z0-9-]+\/[a-z0-9-]+)`\]/g)].map(
+    (match) => match[1],
+  );
+  assert.deepEqual(documented, REQUIRED_UAT_CASES);
+  assert.equal(new Set(documented).size, documented.length);
+});
+
 test("UAT reports require an observed pass for every protocol case", () => {
   const evidence = physicalEvidence();
   const report = uatReport(evidence.runs[0]);
