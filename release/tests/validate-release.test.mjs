@@ -19,8 +19,8 @@ import {
   parseGithubActionsRunUrl,
   parseZipEntries,
   publicRefManifestSha256,
-  pullRequestHeadTreeMatchesCandidate,
   readinessBlockers,
+  reviewedCleanHistoryMatchesCandidate,
   securityFindingFingerprint,
   stremioCandidateSha256,
   validateApkNativeAbi,
@@ -356,78 +356,87 @@ test("only ancestor or identical commits satisfy public reachability", () => {
   assert.equal(commitContainsAncestor(diverged, ancestor, descendant), false);
 });
 
-test("release-critical Kodi PR requires exact candidate and PR head tree equality", () => {
+test("rewritten Kodi history requires the exact upstream base and reviewed tree chain", () => {
   const component = { commit: "1".repeat(40) };
-  const tree = "2".repeat(40);
-  const head = "3".repeat(40);
-  const pull = {
+  const candidateTree = "2".repeat(40);
+  const sourceHead = "3".repeat(40);
+  const sourceTree = "4".repeat(40);
+  const finalBase = "5".repeat(40);
+  const finalMerge = "6".repeat(40);
+  const sourcePull = {
     number: 5,
-    merged_at: "2026-07-29T10:00:00Z",
-    merge_commit_sha: "5".repeat(40),
+    merged_at: null,
     base: { ref: "master", repo: { full_name: "ruizkinio/Jumpgate-kodi" } },
-    head: { sha: head, repo: { full_name: "ruizkinio/Jumpgate-kodi" } },
+    head: { sha: sourceHead, repo: { full_name: "ruizkinio/Jumpgate-kodi" } },
   };
-  const candidateGitCommit = { sha: component.commit, tree: { sha: tree } };
-  const pullHeadGitCommit = { sha: head, tree: { sha: tree } };
-  const mergeAncestor = {
-    status: "ahead",
-    base_commit: { sha: pull.merge_commit_sha },
-    merge_base_commit: { sha: pull.merge_commit_sha },
+  const finalPull = {
+    number: 6,
+    merged_at: "2026-07-30T10:00:00Z",
+    merge_commit_sha: finalMerge,
+    base: {
+      ref: "release/clean-history-v3",
+      sha: finalBase,
+      repo: { full_name: "ruizkinio/Jumpgate-kodi" },
+    },
+    head: { repo: { full_name: "ruizkinio/Jumpgate-kodi" } },
+  };
+  const developmentPulls = [2, 3, 4].map((number) => ({
+    number,
+    merged_at: "2026-07-29T10:00:00Z",
+    merge_commit_sha: String(number).repeat(40),
+    base: { repo: { full_name: "ruizkinio/Jumpgate-kodi" } },
+    head: { repo: { full_name: "ruizkinio/Jumpgate-kodi" } },
+  }));
+  const proof = {
+    candidateGitCommit: {
+      sha: component.commit,
+      tree: { sha: candidateTree },
+      parents: [{ sha: COMPONENT_POLICIES.kodi.reviewedHistory.upstreamBase }],
+    },
+    upstreamBaseGitCommit: { sha: COMPONENT_POLICIES.kodi.reviewedHistory.upstreamBase },
+    sourcePull,
+    sourceHeadGitCommit: { sha: sourceHead, tree: { sha: sourceTree } },
+    finalPull,
+    finalBaseGitCommit: { sha: finalBase, tree: { sha: sourceTree } },
+    finalMergeGitCommit: { sha: finalMerge, tree: { sha: candidateTree } },
+    developmentPulls,
+    developmentCompares: developmentPulls.map((pull) => ({
+      status: "ahead",
+      base_commit: { sha: pull.merge_commit_sha },
+      merge_base_commit: { sha: pull.merge_commit_sha },
+    })),
   };
   assert.equal(
-    pullRequestHeadTreeMatchesCandidate(
-      pull,
-      component,
-      candidateGitCommit,
-      pullHeadGitCommit,
-      COMPONENT_POLICIES.kodi,
-      mergeAncestor,
-    ),
+    reviewedCleanHistoryMatchesCandidate(proof, component, COMPONENT_POLICIES.kodi),
     true,
   );
 
-  const revertedCandidate = structuredClone(candidateGitCommit);
-  revertedCandidate.tree.sha = "4".repeat(40);
+  const mergedSource = structuredClone(proof);
+  mergedSource.sourcePull.merged_at = "2026-07-30T11:00:00Z";
   assert.equal(
-    pullRequestHeadTreeMatchesCandidate(
-      pull,
-      component,
-      revertedCandidate,
-      pullHeadGitCommit,
-      COMPONENT_POLICIES.kodi,
-      mergeAncestor,
-    ),
+    reviewedCleanHistoryMatchesCandidate(mergedSource, component, COMPONENT_POLICIES.kodi),
     false,
   );
 
-  const missingMergeCommit = structuredClone(pull);
-  delete missingMergeCommit.merge_commit_sha;
+  const additionalParent = structuredClone(proof);
+  additionalParent.candidateGitCommit.parents.push({ sha: "7".repeat(40) });
   assert.equal(
-    pullRequestHeadTreeMatchesCandidate(
-      missingMergeCommit,
-      component,
-      candidateGitCommit,
-      pullHeadGitCommit,
-      COMPONENT_POLICIES.kodi,
-      null,
-    ),
+    reviewedCleanHistoryMatchesCandidate(additionalParent, component, COMPONENT_POLICIES.kodi),
     false,
   );
 
-  const divergedMerge = {
-    status: "diverged",
-    base_commit: { sha: pull.merge_commit_sha },
-    merge_base_commit: { sha: "0".repeat(40) },
-  };
+  const changedCandidateTree = structuredClone(proof);
+  changedCandidateTree.candidateGitCommit.tree.sha = "8".repeat(40);
   assert.equal(
-    pullRequestHeadTreeMatchesCandidate(
-      pull,
-      component,
-      candidateGitCommit,
-      pullHeadGitCommit,
-      COMPONENT_POLICIES.kodi,
-      divergedMerge,
-    ),
+    reviewedCleanHistoryMatchesCandidate(changedCandidateTree, component, COMPONENT_POLICIES.kodi),
+    false,
+  );
+
+  const divergedDevelopment = structuredClone(proof);
+  divergedDevelopment.developmentCompares[0].status = "diverged";
+  divergedDevelopment.developmentCompares[0].merge_base_commit.sha = "0".repeat(40);
+  assert.equal(
+    reviewedCleanHistoryMatchesCandidate(divergedDevelopment, component, COMPONENT_POLICIES.kodi),
     false,
   );
 });
@@ -968,7 +977,7 @@ test("readiness derives every publication proof independently", () => {
       missingPullRequests: ["Kodi#5"],
     }),
     [
-      "required component pull requests are not merged into the candidate: Kodi#5",
+      "required component review/history proofs are incomplete: Kodi#5",
       "the Kodi release signer is explicitly not yet provisioned; current APKs are ephemeral",
       "the deployed Bridge digest lacks a candidate-bound deployment attestation artifact",
       "the locked Stremio APK bytes, manifests, ABI sets, and signing certificate have not been independently verified",
