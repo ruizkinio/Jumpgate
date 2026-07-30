@@ -25,3 +25,28 @@ Store its client ID as `JUMPGATE_AUDIT_APP_CLIENT_ID` and its private key as
 The token cryptographically verifies the Bridge deployment subject through GitHub
 OIDC and reads cross-repository artifacts and current security state. Repository-local
 `GITHUB_TOKEN` permissions are not treated as cross-repository proof.
+
+## Security Audit Evidence
+
+`security-audit.json` is never committed. The protected `require-ready` job downloads
+the exact policy-pinned Linux x64 Gitleaks archive, verifies its SHA-256 before bounded
+extraction, and requires the executable to report version `8.30.1`. It rejects inherited
+Git or Gitleaks configuration and uses an explicit configuration that extends only the
+scanner's pinned default rules.
+
+Each audit replica captures public heads and tags before fetch, after fetch, and after
+scan. It fetches exact objects into private audit namespaces. Root and Bridge cover all
+public history. Kodi records a reviewed range for every public head and tag and scans
+only commits not reachable from the exact simultaneously captured official `xbmc/xbmc`
+public refs. Added, removed, moved, or retagged refs invalidate the report.
+
+Findings are reduced immediately to SHA-256 fingerprints over rule ID, commit, normalized
+repository-relative path, and line/column location. Secret text, matches, source excerpts,
+authors, emails, raw reports, clones, and patches remain in private temporary directories
+and are deleted. Two fresh clones must produce byte-identical sanitized reports. Only
+that reproduced report is uploaded as an Actions artifact.
+
+`release/security-allowlist.json` is the sole allowlist. Every entry must identify an
+observed fingerprint, include a sanitized review rationale, and be unexpired. Missing,
+extra, stale, expired, or unresolved entries fail the protected job. The generated report
+binds the exact allowlist bytes by SHA-256.

@@ -206,16 +206,21 @@ export const REQUIRED_UAT_CASES = Object.freeze([
   "profiles/repair-history-boundary",
 ]);
 
-const SECURITY_SCOPES = Object.freeze({
+export const SECURITY_SCOPES = Object.freeze({
   "ruizkinio/Jumpgate": "all-public-history",
   "ruizkinio/Jumpgate-bridge": "all-public-branches-and-tags",
   "ruizkinio/Jumpgate-kodi": "jumpgate-authored-public-ranges-and-branches",
 });
 
+export const KODI_UPSTREAM_REPOSITORY = "xbmc/xbmc";
+
 export const GITLEAKS_POLICY = Object.freeze({
   scanner: "gitleaks",
   version: "8.30.1",
+  linuxX64ArchiveUrl:
+    "https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz",
   linuxX64ArchiveSha256: "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb",
+  configSha256: "071bff1f6b205c83490d1f01b0db9070122c211c03e84c36cf0677fec1d9e993",
 });
 
 function fail(message) {
@@ -803,93 +808,99 @@ export function verifyCurrentPublicRefManifest(recorded, current) {
   return true;
 }
 
-export function validateSecurityAudit(evidence, candidate, now = new Date()) {
-  assertExactKeys(
-    evidence,
-    ["schemaVersion", "candidate", "completedAt", "repositories"],
-    "security audit",
-  );
-  if (evidence.schemaVersion !== 2) fail("security audit schemaVersion must be 2");
-  assertExactValue(evidence.candidate, {
-    bridgeCommit: candidate.components.bridge.commit,
-    kodiCommit: candidate.components.kodi.commit,
-  }, "security audit.candidate");
-  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(evidence.completedAt)) {
-    fail("security audit.completedAt must be an RFC 3339 UTC timestamp");
-  }
-  const completedAt = new Date(evidence.completedAt);
-  const age = now.valueOf() - completedAt.valueOf();
-  if (Number.isNaN(completedAt.valueOf()) || age < -300_000 || age > PHYSICAL_EVIDENCE_MAX_AGE_MS) {
-    fail("security audit must be completed within the 30-day release window");
-  }
-  if (!Array.isArray(evidence.repositories) || evidence.repositories.length !== 3) {
-    fail("security audit must cover all three public Jumpgate repositories");
-  }
-  const seen = new Set();
-  for (const [index, record] of evidence.repositories.entries()) {
-    const path = `security audit.repositories[${index}]`;
-    assertExactKeys(
-      record,
-      [
-        "repository",
-        "scope",
-        "auditedRefsSha256",
-        "scanner",
-        "scannerVersion",
-        "scannerArchiveSha256",
-        "rawFindings",
-        "allowlistedFindings",
-        "unresolvedFindings",
-        "evidenceUrl",
-        "evidenceSha256",
-      ],
-      path,
+function securityCommands(repository) {
+  const commands = [
+    "git ls-remote --heads --tags",
+    "git fetch --filter=blob:none --no-tags --stdin into refs/jumpgate-audit/public",
+  ];
+  if (repository === "ruizkinio/Jumpgate-kodi") {
+    commands.push(
+      "git fetch --filter=blob:none --no-tags --stdin into refs/jumpgate-audit/upstream",
+      "gitleaks git --redact=100 --log-opts=--full-history --diff-filter=tuxdb --all --not --glob=refs/jumpgate-audit/upstream/*",
     );
-    if (!Object.hasOwn(SECURITY_SCOPES, record.repository)) {
-      fail(`${path}.repository is not a public Jumpgate repository`);
-    }
-    if (seen.has(record.repository) || record.scope !== SECURITY_SCOPES[record.repository]) {
-      fail(`${path} must use the exact unique audit scope`);
-    }
-    seen.add(record.repository);
-    assertHash(record.auditedRefsSha256, `${path}.auditedRefsSha256`);
-    if (
-      record.scanner !== GITLEAKS_POLICY.scanner ||
-      record.scannerVersion !== GITLEAKS_POLICY.version ||
-      record.scannerArchiveSha256 !== GITLEAKS_POLICY.linuxX64ArchiveSha256
-    ) {
-      fail(`${path} must use the policy-pinned Gitleaks build`);
-    }
-    for (const field of ["rawFindings", "allowlistedFindings", "unresolvedFindings"]) {
-      if (!Number.isSafeInteger(record[field]) || record[field] < 0 || record[field] > 100_000) {
-        fail(`${path}.${field} must be a bounded non-negative integer`);
-      }
-    }
-    if (
-      record.allowlistedFindings > record.rawFindings ||
-      record.unresolvedFindings !== record.rawFindings - record.allowlistedFindings
-    ) {
-      fail(`${path} finding counts are inconsistent`);
-    }
-    if (record.unresolvedFindings !== 0) fail(`${path}.unresolvedFindings must be zero`);
-    parseEvidenceBlobUrl(record.evidenceUrl, `${path}.evidenceUrl`);
-    assertHash(record.evidenceSha256, `${path}.evidenceSha256`);
+  } else {
+    commands.push(
+      "gitleaks git --redact=100 --log-opts=--full-history --diff-filter=tuxdb --all",
+    );
   }
-  return evidence;
+  return commands;
 }
 
-export function validateSecurityReport(report, record) {
+export function validateSecurityAllowlist(allowlist, completedAt) {
+  assertExactKeys(allowlist, ["schemaVersion", "entries"], "security allowlist");
+  if (allowlist.schemaVersion !== 1) fail("security allowlist schemaVersion must be 1");
+  if (!Array.isArray(allowlist.entries) || allowlist.entries.length > 100_000) {
+    fail("security allowlist.entries must be a bounded array");
+  }
+  let previous = null;
+  for (const [index, entry] of allowlist.entries.entries()) {
+    const path = `security allowlist.entries[${index}]`;
+    assertExactKeys(entry, ["repository", "fingerprint", "reason", "expiresAt"], path);
+    if (!Object.hasOwn(SECURITY_SCOPES, entry.repository)) {
+      fail(`${path}.repository is not a public Jumpgate repository`);
+    }
+    assertHash(entry.fingerprint, `${path}.fingerprint`);
+    if (
+      typeof entry.reason !== "string" ||
+      entry.reason.length < 10 ||
+      entry.reason.length > 300 ||
+      entry.reason.trim() !== entry.reason ||
+      /[\u0000-\u001f\u007f]/.test(entry.reason)
+    ) {
+      fail(`${path}.reason must be a concise sanitized review rationale`);
+    }
+    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(entry.expiresAt)) {
+      fail(`${path}.expiresAt must be an RFC 3339 UTC timestamp without fractions`);
+    }
+    const expiresAt = new Date(entry.expiresAt);
+    if (Number.isNaN(expiresAt.valueOf()) || expiresAt <= completedAt) {
+      fail(`${path} is expired`);
+    }
+    const key = `${entry.repository}\n${entry.fingerprint}`;
+    if (previous !== null && key <= previous) {
+      fail("security allowlist entries must be sorted and unique");
+    }
+    previous = key;
+  }
+  return allowlist;
+}
+
+function validateReviewedRanges(record, path) {
+  const publicRefs = record.refs.filter((entry) => !entry.name.endsWith("^{}"));
+  if (!Array.isArray(record.reviewedRanges) || record.reviewedRanges.length !== publicRefs.length) {
+    fail(`${path}.reviewedRanges must cover every public head and tag exactly once`);
+  }
+  const isKodi = record.repository === "ruizkinio/Jumpgate-kodi";
+  for (const [index, range] of record.reviewedRanges.entries()) {
+    const rangePath = `${path}.reviewedRanges[${index}]`;
+    assertExactKeys(range, ["ref", "tip", "selection", "excludedRefsSha256"], rangePath);
+    const publicRef = publicRefs[index];
+    if (range.ref !== publicRef.name || range.tip !== publicRef.objectId) {
+      fail(`${rangePath} must match the sorted public ref manifest`);
+    }
+    const expectedSelection = isKodi
+      ? "tip-minus-upstream-public-history"
+      : "reachable-history";
+    if (range.selection !== expectedSelection) {
+      fail(`${rangePath}.selection must match the repository audit scope`);
+    }
+    const expectedExclusion = isKodi ? record.upstream.auditedRefsSha256 : null;
+    if (range.excludedRefsSha256 !== expectedExclusion) {
+      fail(`${rangePath}.excludedRefsSha256 must bind the exact exclusion set`);
+    }
+  }
+}
+
+export function validateSecurityReport(report, scanner, allowlistEntries = []) {
   assertExactKeys(
     report,
     [
-      "schemaVersion",
       "repository",
       "scope",
-      "auditedRefsSha256",
-      "scanner",
-      "scannerVersion",
-      "scannerArchiveSha256",
       "refs",
+      "auditedRefsSha256",
+      "upstream",
+      "reviewedRanges",
       "rawFindingFingerprints",
       "allowlistedFindingFingerprints",
       "unresolvedFindingFingerprints",
@@ -897,11 +908,34 @@ export function validateSecurityReport(report, record) {
     ],
     "security report",
   );
-  if (report.schemaVersion !== 2) fail("security report schemaVersion must be 2");
-  validatePublicRefManifest(report.refs);
+  if (!Object.hasOwn(SECURITY_SCOPES, report.repository)) {
+    fail("security report.repository is not a public Jumpgate repository");
+  }
+  if (report.scope !== SECURITY_SCOPES[report.repository]) {
+    fail("security report.scope must match the repository audit scope");
+  }
+  validatePublicRefManifest(report.refs, "security report.refs");
   if (publicRefManifestSha256(report.refs) !== report.auditedRefsSha256) {
     fail("security report auditedRefsSha256 must derive from its exact public ref manifest");
   }
+  if (report.repository === "ruizkinio/Jumpgate-kodi") {
+    assertExactKeys(
+      report.upstream,
+      ["repository", "refs", "auditedRefsSha256"],
+      "security report.upstream",
+    );
+    if (report.upstream.repository !== KODI_UPSTREAM_REPOSITORY) {
+      fail("security report.upstream must use the official Kodi repository");
+    }
+    validatePublicRefManifest(report.upstream.refs, "security report.upstream.refs");
+    if (publicRefManifestSha256(report.upstream.refs) !== report.upstream.auditedRefsSha256) {
+      fail("security report upstream hash must derive from its exact public ref manifest");
+    }
+  } else if (report.upstream !== null) {
+    fail("only the Kodi audit may exclude exact official upstream history");
+  }
+  validateReviewedRanges(report, "security report");
+
   const raw = validateFindingFingerprints(
     report.rawFindingFingerprints,
     "security report.rawFindingFingerprints",
@@ -914,54 +948,87 @@ export function validateSecurityReport(report, record) {
     report.unresolvedFindingFingerprints,
     "security report.unresolvedFindingFingerprints",
   );
+  const expectedAllowlisted = allowlistEntries
+    .filter((entry) => entry.repository === report.repository)
+    .map((entry) => entry.fingerprint);
+  if (expectedAllowlisted.join("\n") !== allowlisted.join("\n")) {
+    fail("security report must use every exact repository allowlist entry");
+  }
   const rawSet = new Set(raw);
   if (allowlisted.some((fingerprint) => !rawSet.has(fingerprint))) {
-    fail("security report allowlisted findings must be a subset of raw findings");
+    fail("security report contains a stale or unused allowlist entry");
   }
   const allowlistedSet = new Set(allowlisted);
   const expectedUnresolved = raw.filter((fingerprint) => !allowlistedSet.has(fingerprint));
   if (expectedUnresolved.join("\n") !== unresolved.join("\n")) {
     fail("security report unresolved findings must equal raw findings minus the allowlist");
   }
-  assertExactValue(
-    {
-      repository: report.repository,
-      scope: report.scope,
-      auditedRefsSha256: report.auditedRefsSha256,
-      scanner: report.scanner,
-      scannerVersion: report.scannerVersion,
-      scannerArchiveSha256: report.scannerArchiveSha256,
-      rawFindings: raw.length,
-      allowlistedFindings: allowlisted.length,
-      unresolvedFindings: unresolved.length,
-    },
-    {
-      repository: record.repository,
-      scope: record.scope,
-      auditedRefsSha256: record.auditedRefsSha256,
-      scanner: record.scanner,
-      scannerVersion: record.scannerVersion,
-      scannerArchiveSha256: record.scannerArchiveSha256,
-      rawFindings: record.rawFindings,
-      allowlistedFindings: record.allowlistedFindings,
-      unresolvedFindings: 0,
-    },
-    "security report",
-  );
+  if (unresolved.length !== 0) fail("security report unresolved findings must be zero");
+  assertExactValue(report.commands, securityCommands(report.repository), "security report.commands");
   if (
-    !Array.isArray(report.commands) ||
-    report.commands.length < 1 ||
-    report.commands.some(
-      (command) =>
-        typeof command !== "string" ||
-        command.length > 200 ||
-        command.trim() !== command ||
-        /[\u0000-\u001f\u007f]/.test(command),
-    )
+    scanner.name !== GITLEAKS_POLICY.scanner ||
+    scanner.version !== GITLEAKS_POLICY.version ||
+    scanner.archiveSha256 !== GITLEAKS_POLICY.linuxX64ArchiveSha256 ||
+    scanner.configSha256 !== GITLEAKS_POLICY.configSha256
   ) {
-    fail("security report.commands must contain sanitized reproducible command names");
+    fail("security report must use the policy-pinned Gitleaks build and configuration");
   }
   return report;
+}
+
+export function validateSecurityAudit(
+  evidence,
+  candidate,
+  now = new Date(),
+  allowlist = { schemaVersion: 1, entries: [] },
+  allowlistSha256 = null,
+) {
+  assertExactKeys(
+    evidence,
+    [
+      "schemaVersion",
+      "candidate",
+      "completedAt",
+      "scanner",
+      "allowlistSha256",
+      "repositories",
+    ],
+    "security audit",
+  );
+  if (evidence.schemaVersion !== 3) fail("security audit schemaVersion must be 3");
+  assertExactValue(evidence.candidate, {
+    bridgeCommit: candidate.components.bridge.commit,
+    kodiCommit: candidate.components.kodi.commit,
+  }, "security audit.candidate");
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(evidence.completedAt)) {
+    fail("security audit.completedAt must be an RFC 3339 UTC timestamp");
+  }
+  const completedAt = new Date(evidence.completedAt);
+  const age = now.valueOf() - completedAt.valueOf();
+  if (Number.isNaN(completedAt.valueOf()) || age < -300_000 || age > PHYSICAL_EVIDENCE_MAX_AGE_MS) {
+    fail("security audit must be completed within the 30-day release window");
+  }
+  assertExactKeys(
+    evidence.scanner,
+    ["name", "version", "archiveSha256", "configSha256"],
+    "security audit.scanner",
+  );
+  validateSecurityAllowlist(allowlist, completedAt);
+  assertHash(evidence.allowlistSha256, "security audit.allowlistSha256");
+  if (allowlistSha256 !== null && evidence.allowlistSha256 !== allowlistSha256) {
+    fail("security audit allowlist hash does not match the tracked policy bytes");
+  }
+  if (!Array.isArray(evidence.repositories) || evidence.repositories.length !== 3) {
+    fail("security audit must cover all three public Jumpgate repositories");
+  }
+  const expectedRepositories = Object.keys(SECURITY_SCOPES);
+  evidence.repositories.forEach((record, index) => {
+    if (record.repository !== expectedRepositories[index]) {
+      fail("security audit repositories must use the exact policy order");
+    }
+    validateSecurityReport(record, evidence.scanner, allowlist.entries);
+  });
+  return evidence;
 }
 
 export function parseLockedCoreDependency(packageJson, lockText, stremio) {
@@ -1061,6 +1128,18 @@ function readGitlinks(root) {
     entries.set(match[3], { mode: match[1], commit: match[2] });
   }
   return entries;
+}
+
+function pathIsTracked(root, path) {
+  try {
+    execFileSync("git", ["ls-files", "--error-unmatch", "--", path], {
+      cwd: root,
+      stdio: "ignore",
+    });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function gitLsRemote(repository, refs) {
@@ -1707,30 +1786,20 @@ async function verifyEvidenceArtifacts(evidence, candidate) {
   );
 }
 
-async function verifySecurityArtifacts(evidence) {
-  await Promise.all(
-    evidence.repositories.map(async (record) => {
-      const blob = parseEvidenceBlobUrl(record.evidenceUrl);
-      const bytes = await fetchBytes(
-        `https://raw.githubusercontent.com/ruizkinio/${blob.repository}/${blob.commit}/${blob.filePath}`,
-      );
-      const actual = createHash("sha256").update(bytes).digest("hex");
-      if (actual !== record.evidenceSha256) {
-        fail(`security evidence digest does not match ${record.evidenceUrl}`);
-      }
-      let report;
-      try {
-        report = JSON.parse(bytes.toString("utf8"));
-      } catch {
-        fail(`security evidence artifact is not JSON: ${record.evidenceUrl}`);
-      }
-      validateSecurityReport(report, record);
+function verifyGeneratedSecurityAudit(evidence) {
+  for (const report of evidence.repositories) {
+    verifyCurrentPublicRefManifest(
+      report.refs,
+      currentPublicRefManifest(`https://github.com/${report.repository}.git`),
+    );
+    if (report.repository === "ruizkinio/Jumpgate-kodi") {
       verifyCurrentPublicRefManifest(
-        report.refs,
-        currentPublicRefManifest(`https://github.com/${record.repository}.git`),
+        report.upstream.refs,
+        currentPublicRefManifest(`https://github.com/${KODI_UPSTREAM_REPOSITORY}.git`),
       );
-    }),
-  );
+    }
+  }
+  return true;
 }
 
 async function verifyLiveSecurityState() {
@@ -2110,10 +2179,25 @@ async function main() {
   if (!securityAuditPath.startsWith(`${root}${sep}`)) {
     fail("securityAuditEvidence must stay inside the repository");
   }
+  const securityAllowlistPath = resolve(root, "release/security-allowlist.json");
+  const securityAllowlistBytes = readFileSync(securityAllowlistPath);
+  const securityAllowlist = readJson(securityAllowlistPath);
+  const securityAllowlistSha256 = createHash("sha256")
+    .update(securityAllowlistBytes)
+    .digest("hex");
   let securityAudit = null;
   if (existsSync(securityAuditPath)) {
-    securityAudit = validateSecurityAudit(readJson(securityAuditPath), candidate);
-    await verifySecurityArtifacts(securityAudit);
+    if (pathIsTracked(root, candidate.securityAuditEvidence)) {
+      fail("security audit evidence must be generated and untracked");
+    }
+    securityAudit = validateSecurityAudit(
+      readJson(securityAuditPath),
+      candidate,
+      new Date(),
+      securityAllowlist,
+      securityAllowlistSha256,
+    );
+    verifyGeneratedSecurityAudit(securityAudit);
   }
 
   const [kodiArtifactProof, bridgeAttestationProof, liveSecurityProof] = requireReady

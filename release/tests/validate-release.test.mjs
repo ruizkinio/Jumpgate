@@ -6,6 +6,7 @@ import test from "node:test";
 import {
   COMPONENT_POLICIES,
   GITLEAKS_POLICY,
+  KODI_UPSTREAM_REPOSITORY,
   KODI_RELEASE_POLICY,
   PHYSICAL_EVIDENCE_MAX_AGE_MS,
   REQUIRED_UAT_CASES,
@@ -29,6 +30,7 @@ import {
   validateKodiApkManifest,
   validateNpmProvenance,
   validateSecurityAudit,
+  validateSecurityAllowlist,
   validateSecurityReport,
   validateUatReport,
   verifyComponentAuditedFiles,
@@ -124,35 +126,71 @@ function uatReport(run, locked = candidate()) {
   };
 }
 
-function securityAudit() {
+function securityAllowlist(entries = []) {
+  return { schemaVersion: 1, entries };
+}
+
+function securityAudit(allowlist = securityAllowlist()) {
   const records = Object.entries({
     "ruizkinio/Jumpgate": "all-public-history",
     "ruizkinio/Jumpgate-bridge": "all-public-branches-and-tags",
     "ruizkinio/Jumpgate-kodi": "jumpgate-authored-public-ranges-and-branches",
   }).map(([repository, scope], index) => {
     const refs = [{ name: "refs/heads/main", objectId: String(index + 1).repeat(40) }];
+    const upstreamRefs = [{ name: "refs/heads/master", objectId: "9".repeat(40) }];
+    const upstream = repository === "ruizkinio/Jumpgate-kodi"
+      ? {
+          repository: KODI_UPSTREAM_REPOSITORY,
+          refs: upstreamRefs,
+          auditedRefsSha256: publicRefManifestSha256(upstreamRefs),
+        }
+      : null;
+    const allowed = allowlist.entries
+      .filter((entry) => entry.repository === repository)
+      .map((entry) => entry.fingerprint);
     return {
       repository,
       scope,
+      refs,
       auditedRefsSha256: publicRefManifestSha256(refs),
-      scanner: GITLEAKS_POLICY.scanner,
-      scannerVersion: GITLEAKS_POLICY.version,
-      scannerArchiveSha256: GITLEAKS_POLICY.linuxX64ArchiveSha256,
-      rawFindings: 1,
-      allowlistedFindings: 1,
-      unresolvedFindings: 0,
-      evidenceUrl:
-        `https://github.com/ruizkinio/Jumpgate/blob/${String(index + 4).repeat(40)}/release/evidence/security-${index}.json`,
-      evidenceSha256: String(index + 7).repeat(64),
+      upstream,
+      reviewedRanges: [{
+        ref: refs[0].name,
+        tip: refs[0].objectId,
+        selection: upstream ? "tip-minus-upstream-public-history" : "reachable-history",
+        excludedRefsSha256: upstream?.auditedRefsSha256 ?? null,
+      }],
+      rawFindingFingerprints: allowed,
+      allowlistedFindingFingerprints: allowed,
+      unresolvedFindingFingerprints: [],
+      commands: repository === "ruizkinio/Jumpgate-kodi"
+        ? [
+            "git ls-remote --heads --tags",
+            "git fetch --filter=blob:none --no-tags --stdin into refs/jumpgate-audit/public",
+            "git fetch --filter=blob:none --no-tags --stdin into refs/jumpgate-audit/upstream",
+            "gitleaks git --redact=100 --log-opts=--full-history --diff-filter=tuxdb --all --not --glob=refs/jumpgate-audit/upstream/*",
+          ]
+        : [
+            "git ls-remote --heads --tags",
+            "git fetch --filter=blob:none --no-tags --stdin into refs/jumpgate-audit/public",
+            "gitleaks git --redact=100 --log-opts=--full-history --diff-filter=tuxdb --all",
+          ],
     };
   });
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     candidate: {
       bridgeCommit: CANDIDATE_TEMPLATE.components.bridge.commit,
       kodiCommit: CANDIDATE_TEMPLATE.components.kodi.commit,
     },
     completedAt: "2026-07-29T10:00:00Z",
+    scanner: {
+      name: GITLEAKS_POLICY.scanner,
+      version: GITLEAKS_POLICY.version,
+      archiveSha256: GITLEAKS_POLICY.linuxX64ArchiveSha256,
+      configSha256: GITLEAKS_POLICY.configSha256,
+    },
+    allowlistSha256: "a".repeat(64),
     repositories: records,
   };
 }
@@ -645,55 +683,81 @@ test("evidence URLs must be immutable public blobs without ambient data", () => 
 });
 
 test("security audit evidence is scoped, zero-finding, and reproducible", () => {
-  const audit = securityAudit();
-  assert.equal(validateSecurityAudit(audit, candidate(), TEST_NOW), audit);
-  const record = audit.repositories[0];
-  const refs = [{ name: "refs/heads/main", objectId: "1".repeat(40) }];
-  const report = {
-    schemaVersion: 2,
-    repository: record.repository,
-    scope: record.scope,
-    auditedRefsSha256: record.auditedRefsSha256,
-    scanner: record.scanner,
-    scannerVersion: record.scannerVersion,
-    scannerArchiveSha256: record.scannerArchiveSha256,
-    refs,
-    rawFindingFingerprints: ["a".repeat(64)],
-    allowlistedFindingFingerprints: ["a".repeat(64)],
-    unresolvedFindingFingerprints: [],
-    commands: ["gitleaks git --redact"],
-  };
-  assert.equal(validateSecurityReport(report, record), report);
+  const emptyAllowlist = securityAllowlist();
+  const audit = securityAudit(emptyAllowlist);
+  assert.equal(
+    validateSecurityAudit(audit, candidate(), TEST_NOW, emptyAllowlist, audit.allowlistSha256),
+    audit,
+  );
+  assert.equal(validateSecurityReport(audit.repositories[0], audit.scanner), audit.repositories[0]);
+
+  const reviewed = securityAllowlist([{
+    repository: "ruizkinio/Jumpgate",
+    fingerprint: "a".repeat(64),
+    reason: "Reviewed credential-shaped test fixture with no authority.",
+    expiresAt: "2026-08-29T10:00:00Z",
+  }]);
+  const allowlistedAudit = securityAudit(reviewed);
+  assert.equal(
+    validateSecurityAudit(
+      allowlistedAudit,
+      candidate(),
+      TEST_NOW,
+      reviewed,
+      allowlistedAudit.allowlistSha256,
+    ),
+    allowlistedAudit,
+  );
 
   const finding = securityAudit();
-  finding.repositories[1].rawFindings = 2;
-  finding.repositories[1].unresolvedFindings = 1;
+  finding.repositories[1].rawFindingFingerprints = ["b".repeat(64)];
+  finding.repositories[1].unresolvedFindingFingerprints = ["b".repeat(64)];
   assert.throws(
     () => validateSecurityAudit(finding, candidate(), TEST_NOW),
-    /unresolvedFindings must be zero/,
+    /unresolved findings must be zero/,
   );
 
   const substitutedScanner = securityAudit();
-  substitutedScanner.repositories[0].scannerVersion = "8.30.2";
+  substitutedScanner.scanner.version = "8.30.2";
   assert.throws(
     () => validateSecurityAudit(substitutedScanner, candidate(), TEST_NOW),
     /policy-pinned Gitleaks/,
   );
 
-  const forgedAllowlist = structuredClone(report);
-  forgedAllowlist.allowlistedFindingFingerprints = ["b".repeat(64)];
+  const staleAllowlistAudit = securityAudit();
   assert.throws(
-    () => validateSecurityReport(forgedAllowlist, record),
-    /subset of raw findings/,
+    () => validateSecurityAudit(
+      staleAllowlistAudit,
+      candidate(),
+      TEST_NOW,
+      reviewed,
+      staleAllowlistAudit.allowlistSha256,
+    ),
+    /use every exact repository allowlist entry/,
   );
 
-  const omittedUnresolved = structuredClone(report);
-  omittedUnresolved.allowlistedFindingFingerprints = [];
+  const expired = structuredClone(reviewed);
+  expired.entries[0].expiresAt = "2026-07-29T09:59:59Z";
   assert.throws(
-    () => validateSecurityReport(omittedUnresolved, record),
-    /raw findings minus the allowlist/,
+    () => validateSecurityAllowlist(expired, new Date(audit.completedAt)),
+    /expired/,
   );
 
+  const missingRange = securityAudit();
+  missingRange.repositories[2].reviewedRanges = [];
+  assert.throws(
+    () => validateSecurityAudit(missingRange, candidate(), TEST_NOW),
+    /cover every public head and tag/,
+  );
+
+  const movedExclusion = securityAudit();
+  movedExclusion.repositories[2].reviewedRanges[0].excludedRefsSha256 = "f".repeat(64);
+  assert.throws(
+    () => validateSecurityAudit(movedExclusion, candidate(), TEST_NOW),
+    /bind the exact exclusion set/,
+  );
+
+  const refs = audit.repositories[0].refs;
   const movedRef = structuredClone(refs);
   movedRef[0].objectId = "2".repeat(40);
   assert.throws(
@@ -713,10 +777,10 @@ test("security audit evidence is scoped, zero-finding, and reproducible", () => 
     /bounded non-empty array/,
   );
 
-  const staleHash = structuredClone(report);
+  const staleHash = structuredClone(audit.repositories[0]);
   staleHash.refs[0].objectId = "4".repeat(40);
   assert.throws(
-    () => validateSecurityReport(staleHash, record),
+    () => validateSecurityReport(staleHash, audit.scanner),
     /must derive from its exact public ref manifest/,
   );
 });
@@ -1099,6 +1163,23 @@ test("release workflow is pinned, main-only, fixed-runner, and non-publishing", 
     /if: github\.event_name == 'workflow_dispatch' && github\.ref == 'refs\/heads\/main'/,
   );
   assert.match(workflow, /build-tools;36\.0\.0/);
+  assert.match(workflow, /require-ready:[\s\S]*?timeout-minutes: 45/);
+  assert.equal((workflow.match(/^\s*run: npm run audit:security$/gm) ?? []).length, 1);
+  assert.equal((workflow.match(/^\s*run: npm run audit:security:smoke$/gm) ?? []).length, 1);
+  assert.match(
+    workflow,
+    /uses: actions\/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7\.0\.1/,
+  );
+  assert.match(workflow, /path: release\/evidence\/security-audit\.json/);
+  assert.doesNotMatch(workflow, /if:\s*always\(\)/);
+  assert.ok(
+    workflow.indexOf("Reproduce sanitized public-history audit") <
+      workflow.indexOf("Upload only the reproduced sanitized audit") &&
+      workflow.indexOf("Upload only the reproduced sanitized audit") <
+        workflow.indexOf("Mint bounded cross-repository audit token") &&
+      workflow.indexOf("Mint bounded cross-repository audit token") <
+        workflow.indexOf("Refuse without complete proof"),
+  );
   assert.equal((workflow.match(/^\s*run: npm ci$/gm) ?? []).length, 2);
   assert.equal((workflow.match(/^\s*cache: npm$/gm) ?? []).length, 2);
 });

@@ -7,6 +7,8 @@
     "node": ">=22.9.0"
   },
   "scripts": {
+    "audit:security": "node release/security-audit.mjs --output release/evidence/security-audit.json",
+    "audit:security:smoke": "node release/security-audit.mjs --self-test",
     "test": "node --test release/tests/*.test.mjs",
     "validate:release": "node release/validate-release.mjs"
   },
