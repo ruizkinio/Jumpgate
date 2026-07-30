@@ -759,6 +759,91 @@ function validateFindingFingerprints(fingerprints, path) {
   return fingerprints;
 }
 
+function validateSecurityFindingPath(value, path) {
+  if (typeof value !== "string" || value.length < 1 || value.length > 4096) {
+    fail(`${path} is invalid`);
+  }
+  const segments = value.split("/");
+  if (
+    value.startsWith("/") ||
+    value.includes("\\") ||
+    /^[A-Za-z]:\//.test(value) ||
+    segments.some((segment) => !segment || segment === "." || segment === "..") ||
+    /[\u0000-\u001f\u007f]/.test(value)
+  ) {
+    fail(`${path} must be a normalized repository-relative path`);
+  }
+  return value;
+}
+
+function validateSecurityLocationInteger(value, path, minimum) {
+  if (!Number.isSafeInteger(value) || value < minimum || value > 1_000_000_000) {
+    fail(`${path} is invalid`);
+  }
+  return value;
+}
+
+export function securityFindingFingerprint(record) {
+  const canonical = {
+    rule: record.rule,
+    commit: record.commit,
+    path: record.path,
+    startLine: record.startLine,
+    endLine: record.endLine,
+    startColumn: record.startColumn,
+    endColumn: record.endColumn,
+  };
+  return createHash("sha256").update(JSON.stringify(canonical), "utf8").digest("hex");
+}
+
+function validateSecurityFindingRecords(records, path) {
+  if (!Array.isArray(records) || records.length > 100_000) {
+    fail(`${path} must be a bounded array`);
+  }
+  let previous = null;
+  for (const [index, record] of records.entries()) {
+    const recordPath = `${path}[${index}]`;
+    assertExactKeys(
+      record,
+      [
+        "fingerprint",
+        "rule",
+        "commit",
+        "path",
+        "startLine",
+        "endLine",
+        "startColumn",
+        "endColumn",
+      ],
+      recordPath,
+    );
+    assertHash(record.fingerprint, `${recordPath}.fingerprint`);
+    if (
+      typeof record.rule !== "string" ||
+      record.rule.length < 1 ||
+      record.rule.length > 200 ||
+      !/^[A-Za-z0-9][A-Za-z0-9._:+/-]*$/.test(record.rule)
+    ) {
+      fail(`${recordPath}.rule is invalid`);
+    }
+    assertCommit(record.commit, `${recordPath}.commit`);
+    validateSecurityFindingPath(record.path, `${recordPath}.path`);
+    validateSecurityLocationInteger(record.startLine, `${recordPath}.startLine`, 1);
+    validateSecurityLocationInteger(record.endLine, `${recordPath}.endLine`, 1);
+    validateSecurityLocationInteger(record.startColumn, `${recordPath}.startColumn`, 0);
+    validateSecurityLocationInteger(record.endColumn, `${recordPath}.endColumn`, 0);
+    if (record.endLine < record.startLine) fail(`${recordPath} line range is invalid`);
+    if (securityFindingFingerprint(record) !== record.fingerprint) {
+      fail(`${recordPath}.fingerprint must derive from the sanitized location record`);
+    }
+    if (previous !== null && record.fingerprint <= previous) {
+      fail(`${path} must be sorted by unique fingerprint`);
+    }
+    previous = record.fingerprint;
+  }
+  return records;
+}
+
 export function validatePublicRefManifest(refs, path = "security report.refs") {
   if (!Array.isArray(refs) || refs.length < 1 || refs.length > 2_000) {
     fail(`${path} must be a bounded non-empty array`);
@@ -891,7 +976,12 @@ function validateReviewedRanges(record, path) {
   }
 }
 
-export function validateSecurityReport(report, scanner, allowlistEntries = []) {
+export function validateSecurityReport(
+  report,
+  scanner,
+  allowlistEntries = [],
+  requireResolved = true,
+) {
   assertExactKeys(
     report,
     [
@@ -901,7 +991,7 @@ export function validateSecurityReport(report, scanner, allowlistEntries = []) {
       "auditedRefsSha256",
       "upstream",
       "reviewedRanges",
-      "rawFindingFingerprints",
+      "rawFindings",
       "allowlistedFindingFingerprints",
       "unresolvedFindingFingerprints",
       "commands",
@@ -936,10 +1026,8 @@ export function validateSecurityReport(report, scanner, allowlistEntries = []) {
   }
   validateReviewedRanges(report, "security report");
 
-  const raw = validateFindingFingerprints(
-    report.rawFindingFingerprints,
-    "security report.rawFindingFingerprints",
-  );
+  const raw = validateSecurityFindingRecords(report.rawFindings, "security report.rawFindings")
+    .map((record) => record.fingerprint);
   const allowlisted = validateFindingFingerprints(
     report.allowlistedFindingFingerprints,
     "security report.allowlistedFindingFingerprints",
@@ -963,7 +1051,9 @@ export function validateSecurityReport(report, scanner, allowlistEntries = []) {
   if (expectedUnresolved.join("\n") !== unresolved.join("\n")) {
     fail("security report unresolved findings must equal raw findings minus the allowlist");
   }
-  if (unresolved.length !== 0) fail("security report unresolved findings must be zero");
+  if (requireResolved && unresolved.length !== 0) {
+    fail("security report unresolved findings must be zero");
+  }
   assertExactValue(report.commands, securityCommands(report.repository), "security report.commands");
   if (
     scanner.name !== GITLEAKS_POLICY.scanner ||
@@ -982,6 +1072,7 @@ export function validateSecurityAudit(
   now = new Date(),
   allowlist = { schemaVersion: 1, entries: [] },
   allowlistSha256 = null,
+  requireResolved = true,
 ) {
   assertExactKeys(
     evidence,
@@ -995,7 +1086,7 @@ export function validateSecurityAudit(
     ],
     "security audit",
   );
-  if (evidence.schemaVersion !== 3) fail("security audit schemaVersion must be 3");
+  if (evidence.schemaVersion !== 4) fail("security audit schemaVersion must be 4");
   assertExactValue(evidence.candidate, {
     bridgeCommit: candidate.components.bridge.commit,
     kodiCommit: candidate.components.kodi.commit,
@@ -1026,7 +1117,7 @@ export function validateSecurityAudit(
     if (record.repository !== expectedRepositories[index]) {
       fail("security audit repositories must use the exact policy order");
     }
-    validateSecurityReport(record, evidence.scanner, allowlist.entries);
+    validateSecurityReport(record, evidence.scanner, allowlist.entries, requireResolved);
   });
   return evidence;
 }

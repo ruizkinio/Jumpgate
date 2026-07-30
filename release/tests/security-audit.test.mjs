@@ -70,7 +70,13 @@ test("finding fingerprints bind identity and location but never secret text", ()
   assert.notEqual(findingFingerprint(finding({ StartLine: 8, EndLine: 8 })), baseline);
   assert.equal(normalizeFindingPath(".\\fixtures\\example.txt"), "fixtures/example.txt");
   assert.throws(() => normalizeFindingPath("../private.txt"), /repository-relative/);
-  assert.deepEqual(sanitizeFindings([finding(), finding({ Secret: "different" })]), [baseline]);
+  const sanitized = sanitizeFindings([finding(), finding({ Secret: "different" })]);
+  assert.equal(sanitized.length, 1);
+  assert.equal(sanitized[0].fingerprint, baseline);
+  assert.equal(sanitized[0].path, "fixtures/example.txt");
+  assert.equal(Object.hasOwn(sanitized[0], "Secret"), false);
+  assert.equal(Object.hasOwn(sanitized[0], "Match"), false);
+  assert.doesNotMatch(JSON.stringify(sanitized), /must-never|also-sensitive|different/);
 });
 
 test("ambient Git and Gitleaks configuration is rejected deterministically", () => {
