@@ -1,16 +1,16 @@
 # Release Status
 
-No coordinated Jumpgate release is ready as of 2026-07-29. The production Bridge is
+No coordinated Jumpgate release is ready as of 2026-07-30. The production Bridge is
 deployed at immutable digest
-`sha256:d3c5acfb4b85e517c48ba7b2d37115f1249ec7b1ad6cb315e10d3c8d2f29ceea`.
-Protected run `30503289720` binds that digest to two healthy v6 Machines, public smoke,
+`sha256:5196797aea9943fffd87ceede8fe1b0a37b008498918f10e5898d9502e59607c`.
+Protected run `30515845255` binds that digest to two healthy v6 Machines, public smoke,
 and a GitHub-hosted OIDC deployment attestation. The Bridge is no longer an open
 coordination blocker. The root currently pins these commits,
 both reachable from their public branches:
 
 | Input | Public branch | Candidate commit |
 | --- | --- | --- |
-| Bridge | `Jumpgate-bridge/main` | `0b0d6786673a749ce7f30769b96acef837865fea` |
+| Bridge | `Jumpgate-bridge/main` | `21b3fbd6487fc7c353727b77883aa3cfc0a49e76` |
 | Kodi | `Jumpgate-kodi/master` | `35bf6b23f84faff14e9372abe0e6f2fcbb153617` |
 
 ## Blockers
@@ -26,25 +26,26 @@ both reachable from their public branches:
   clean Kodi history must pass a fresh audit. Credential findings are not allowlisted.
 - The pinned dual-ABI APKs use per-job ephemeral CI certificates. They are diagnostic
   artifacts, not stable release-signed deliverables.
-- `@stremio/stremio-core-web` `0.60.2` and Stremio Web `development` now contain
-  required core fix `46091b81ec6865fc1bb6e1d056409b78482cfc61`. The latest public Web release is
-  still `v5.0.0-beta.39` with core `0.59.0`, so release validation still needs a new
-  public Stremio Web tag that includes `0.60.2` or later.
+- Official native Android Mobile `2.3.2` and Android TV `1.10.4` are the supported
+  Stremio baselines. The candidate pins both ARM APKs for each app by official versioned
+  URL, package, version code, ABI, SHA-256, and Stremio signing certificate. Static APK
+  inspection confirms the required intent/result and unload paths, but physical phone
+  and TV UAT must still prove lifecycle behavior and exact same-card replay.
 - The Root release-audit GitHub App credentials and the Kodi stable release-signing
   credentials are not provisioned in Actions.
 
 Release coordination can resume only after the clean Kodi candidate replaces the
 credential-bearing custom history, passes the bounded audit, is stable-signed, and
-passes sanitized physical ARM phone and TV UAT. A public Stremio release must also be
-proven through its exact package, lockfile, npm provenance, and core ancestry to include
-the required fix.
+passes sanitized physical ARM phone and TV UAT against the pinned native Stremio APKs.
+No future Stremio release is required.
 
 ## Validation
 
 Pull requests and pushes validate the candidate schema, gitlinks, public component
 ancestry, exact successful provenance runs, required merged component changes, and exact
-Stremio dependency representation. A later branch advance does not invalidate an
+native Stremio APK representation. A later branch advance does not invalidate an
 immutable candidate that remains reachable. Manual `require-ready` validation also
 requires one stable APK signer, candidate-bound physical phone and TV evidence newer
-than 30 days, content-addressed public evidence blobs, and a Stremio Core containing the
-required fix. The workflow validates only; it has no publication job.
+than 30 days, content-addressed public evidence blobs, and independent verification of
+the pinned Stremio APK bytes, package manifests, ABI sets, and signer. The workflow
+validates only; it has no publication job.

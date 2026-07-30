@@ -12,8 +12,5 @@
     "audit:security:smoke": "node release/security-audit.mjs --self-test",
     "test": "node --test release/tests/*.test.mjs",
     "validate:release": "node release/validate-release.mjs"
-  },
-  "devDependencies": {
-    "sigstore": "4.1.1"
   }
 }

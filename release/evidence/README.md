@@ -3,8 +3,10 @@
 `physical-uat.json` is added only after the exact candidate has completed sanitized
 physical ARM phone and TV testing. The validator accepts exactly one record for each
 device class. Each record binds device model/API/ABI, the candidate's ABI-specific APK
-and signer hashes, the deployed Bridge image digest, candidate commits, and every UAT
-section. Evidence expires after 30 days.
+and signer hashes, the exact device-class and ABI-specific Stremio APK and signer, the
+deployed Bridge image digest, candidate commits, and every UAT section. Phone evidence
+must use the locked Mobile baseline; TV evidence must use the locked Android TV baseline.
+Evidence expires after 30 days.
 
 `evidenceUrl` must be an immutable public blob URL in a Jumpgate repository at a full
 commit SHA. The validator downloads that blob and verifies `evidenceSha256`; issue pages,
@@ -14,7 +16,9 @@ allowed in either the index or the evidence blob.
 
 There is deliberately no `ready`, `passed`, or override field. Manual readiness is
 derived from the records, locked artifacts, current gitlinks, component ancestry,
-protected workflow runs, stable signer, and Stremio dependency ancestry.
+protected workflow runs, stable signer, and independently verified native Stremio APK
+bytes, manifests, ABI sets, and signing certificate. Static APK verification does not
+replace the lifecycle and exact same-card replay cases in physical UAT.
 
 The manual `require-ready` workflow mints a short-lived token from a dedicated GitHub
 App. Install that App only on `Jumpgate`, `Jumpgate-bridge`, and `Jumpgate-kodi`, with
