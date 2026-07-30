@@ -16,20 +16,28 @@ both reachable from their public branches:
 ## Blockers
 
 - Kodi PR #5 (`f08bd3b0ba2e7f3eb046c3b0e36dfc3ecb69f90e`) remains a draft on a
-  physical-UAT hold. It is not merged into the pinned public candidate.
+  physical-UAT hold. A clean-history candidate with the same tree is public as
+  `release/clean-history-v3` at
+  `8a21c3d865c1819bc269c9be1a7260381e20bdf2`, but it has not replaced the pinned
+  public candidate.
+- The reproducible history audit passes Root and Bridge but reports two historical
+  Trakt application credentials in Kodi's current custom ancestry. Those credentials
+  must be rotated or revoked, credential-bearing custom refs must be retired, and the
+  clean Kodi history must pass a fresh audit. Credential findings are not allowlisted.
 - The pinned dual-ABI APKs use per-job ephemeral CI certificates. They are diagnostic
   artifacts, not stable release-signed deliverables.
-- The latest public Stremio Web release, `v5.0.0-beta.39`, pins
-  `@stremio/stremio-core-web` `0.59.0` in both `package.json` and
-  `pnpm-lock.yaml`. That package identifies core commit
-  `90c38f181d290fc705049e4c8bd30df00f6f3e66`, which does not contain required
-  core fix `46091b81ec6865fc1bb6e1d056409b78482cfc61`.
+- `@stremio/stremio-core-web` `0.60.2` and Stremio Web `development` now contain
+  required core fix `46091b81ec6865fc1bb6e1d056409b78482cfc61`. The latest public Web release is
+  still `v5.0.0-beta.39` with core `0.59.0`, so release validation still needs a new
+  public Stremio Web tag that includes `0.60.2` or later.
+- The Root release-audit GitHub App credentials and the Kodi stable release-signing
+  credentials are not provisioned in Actions.
 
-Release coordination can resume only after PR #5 passes sanitized physical ARM phone
-and TV UAT and is merged, the resulting dual-ABI APKs are signed by one stable release
-certificate, and a public Stremio release is proven through its exact package, lockfile,
-npm provenance, and core ancestry to include the required fix. Security-alert and
-bounded secret/history audits also remain required before publication.
+Release coordination can resume only after the clean Kodi candidate replaces the
+credential-bearing custom history, passes the bounded audit, is stable-signed, and
+passes sanitized physical ARM phone and TV UAT. A public Stremio release must also be
+proven through its exact package, lockfile, npm provenance, and core ancestry to include
+the required fix.
 
 ## Validation
 
