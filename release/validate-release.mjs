@@ -754,6 +754,55 @@ function validateFindingFingerprints(fingerprints, path) {
   return fingerprints;
 }
 
+export function validatePublicRefManifest(refs, path = "security report.refs") {
+  if (!Array.isArray(refs) || refs.length < 1 || refs.length > 2_000) {
+    fail(`${path} must be a bounded non-empty array`);
+  }
+  let previous = null;
+  for (const [index, entry] of refs.entries()) {
+    const entryPath = `${path}[${index}]`;
+    assertExactKeys(entry, ["name", "objectId"], entryPath);
+    assertCommit(entry.objectId, `${entryPath}.objectId`);
+    if (typeof entry.name !== "string") {
+      fail(`${entryPath}.name is not a safe public head or tag ref`);
+    }
+    const peeled = entry.name.endsWith("^{}");
+    const baseName = peeled ? entry.name.slice(0, -3) : entry.name;
+    if (
+      entry.name.length > 300 ||
+      !/^refs\/(?:heads|tags)\/[A-Za-z0-9][A-Za-z0-9._/-]*$/.test(baseName) ||
+      (peeled && !baseName.startsWith("refs/tags/")) ||
+      baseName.includes("..") ||
+      baseName.includes("//") ||
+      baseName.includes("@{") ||
+      baseName.endsWith(".") ||
+      baseName.split("/").some((part) => part.startsWith(".") || part.endsWith(".lock"))
+    ) {
+      fail(`${entryPath}.name is not a safe public head or tag ref`);
+    }
+    if (previous !== null && entry.name <= previous) {
+      fail(`${path} must be sorted by unique ref name`);
+    }
+    previous = entry.name;
+  }
+  return refs;
+}
+
+export function publicRefManifestSha256(refs) {
+  validatePublicRefManifest(refs);
+  const canonical = refs.map((entry) => `${entry.objectId}\t${entry.name}\n`).join("");
+  return createHash("sha256").update(canonical, "utf8").digest("hex");
+}
+
+export function verifyCurrentPublicRefManifest(recorded, current) {
+  validatePublicRefManifest(recorded, "recorded public refs");
+  validatePublicRefManifest(current, "current public refs");
+  if (JSON.stringify(recorded) !== JSON.stringify(current)) {
+    fail("security report public refs do not match the current remote heads and tags");
+  }
+  return true;
+}
+
 export function validateSecurityAudit(evidence, candidate, now = new Date()) {
   assertExactKeys(
     evidence,
@@ -840,6 +889,7 @@ export function validateSecurityReport(report, record) {
       "scanner",
       "scannerVersion",
       "scannerArchiveSha256",
+      "refs",
       "rawFindingFingerprints",
       "allowlistedFindingFingerprints",
       "unresolvedFindingFingerprints",
@@ -848,6 +898,10 @@ export function validateSecurityReport(report, record) {
     "security report",
   );
   if (report.schemaVersion !== 2) fail("security report schemaVersion must be 2");
+  validatePublicRefManifest(report.refs);
+  if (publicRefManifestSha256(report.refs) !== report.auditedRefsSha256) {
+    fail("security report auditedRefsSha256 must derive from its exact public ref manifest");
+  }
   const raw = validateFindingFingerprints(
     report.rawFindingFingerprints,
     "security report.rawFindingFingerprints",
@@ -1020,6 +1074,12 @@ function gitLsRemote(repository, refs) {
     result.set(ref, commit);
   }
   return result;
+}
+
+function currentPublicRefManifest(repository) {
+  return [...gitLsRemote(repository, ["refs/heads/*", "refs/tags/*"]).entries()]
+    .map(([name, objectId]) => ({ name, objectId }))
+    .sort((left, right) => (left.name < right.name ? -1 : left.name > right.name ? 1 : 0));
 }
 
 function requestHeaders(url) {
@@ -1665,6 +1725,10 @@ async function verifySecurityArtifacts(evidence) {
         fail(`security evidence artifact is not JSON: ${record.evidenceUrl}`);
       }
       validateSecurityReport(report, record);
+      verifyCurrentPublicRefManifest(
+        report.refs,
+        currentPublicRefManifest(`https://github.com/${record.repository}.git`),
+      );
     }),
   );
 }

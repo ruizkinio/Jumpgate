@@ -19,6 +19,7 @@ import {
   parseGithubActionsRunUrl,
   parseLockedCoreDependency,
   parseZipEntries,
+  publicRefManifestSha256,
   pullRequestHeadTreeMatchesCandidate,
   readinessBlockers,
   validateCandidate,
@@ -32,6 +33,7 @@ import {
   validateUatReport,
   verifyComponentAuditedFiles,
   verifyGithubDeploymentAttestation,
+  verifyCurrentPublicRefManifest,
   verifyLiveBridgeState,
 } from "../validate-release.mjs";
 
@@ -127,20 +129,23 @@ function securityAudit() {
     "ruizkinio/Jumpgate": "all-public-history",
     "ruizkinio/Jumpgate-bridge": "all-public-branches-and-tags",
     "ruizkinio/Jumpgate-kodi": "jumpgate-authored-public-ranges-and-branches",
-  }).map(([repository, scope], index) => ({
-    repository,
-    scope,
-    auditedRefsSha256: String(index + 1).repeat(64),
-    scanner: GITLEAKS_POLICY.scanner,
-    scannerVersion: GITLEAKS_POLICY.version,
-    scannerArchiveSha256: GITLEAKS_POLICY.linuxX64ArchiveSha256,
-    rawFindings: 1,
-    allowlistedFindings: 1,
-    unresolvedFindings: 0,
-    evidenceUrl:
-      `https://github.com/ruizkinio/Jumpgate/blob/${String(index + 4).repeat(40)}/release/evidence/security-${index}.json`,
-    evidenceSha256: String(index + 7).repeat(64),
-  }));
+  }).map(([repository, scope], index) => {
+    const refs = [{ name: "refs/heads/main", objectId: String(index + 1).repeat(40) }];
+    return {
+      repository,
+      scope,
+      auditedRefsSha256: publicRefManifestSha256(refs),
+      scanner: GITLEAKS_POLICY.scanner,
+      scannerVersion: GITLEAKS_POLICY.version,
+      scannerArchiveSha256: GITLEAKS_POLICY.linuxX64ArchiveSha256,
+      rawFindings: 1,
+      allowlistedFindings: 1,
+      unresolvedFindings: 0,
+      evidenceUrl:
+        `https://github.com/ruizkinio/Jumpgate/blob/${String(index + 4).repeat(40)}/release/evidence/security-${index}.json`,
+      evidenceSha256: String(index + 7).repeat(64),
+    };
+  });
   return {
     schemaVersion: 2,
     candidate: {
@@ -643,6 +648,7 @@ test("security audit evidence is scoped, zero-finding, and reproducible", () => 
   const audit = securityAudit();
   assert.equal(validateSecurityAudit(audit, candidate(), TEST_NOW), audit);
   const record = audit.repositories[0];
+  const refs = [{ name: "refs/heads/main", objectId: "1".repeat(40) }];
   const report = {
     schemaVersion: 2,
     repository: record.repository,
@@ -651,6 +657,7 @@ test("security audit evidence is scoped, zero-finding, and reproducible", () => 
     scanner: record.scanner,
     scannerVersion: record.scannerVersion,
     scannerArchiveSha256: record.scannerArchiveSha256,
+    refs,
     rawFindingFingerprints: ["a".repeat(64)],
     allowlistedFindingFingerprints: ["a".repeat(64)],
     unresolvedFindingFingerprints: [],
@@ -685,6 +692,32 @@ test("security audit evidence is scoped, zero-finding, and reproducible", () => 
   assert.throws(
     () => validateSecurityReport(omittedUnresolved, record),
     /raw findings minus the allowlist/,
+  );
+
+  const movedRef = structuredClone(refs);
+  movedRef[0].objectId = "2".repeat(40);
+  assert.throws(
+    () => verifyCurrentPublicRefManifest(refs, movedRef),
+    /do not match the current remote/,
+  );
+  assert.throws(
+    () =>
+      verifyCurrentPublicRefManifest(refs, [
+        ...refs,
+        { name: "refs/tags/v3.0.0", objectId: "3".repeat(40) },
+      ]),
+    /do not match the current remote/,
+  );
+  assert.throws(
+    () => verifyCurrentPublicRefManifest(refs, []),
+    /bounded non-empty array/,
+  );
+
+  const staleHash = structuredClone(report);
+  staleHash.refs[0].objectId = "4".repeat(40);
+  assert.throws(
+    () => validateSecurityReport(staleHash, record),
+    /must derive from its exact public ref manifest/,
   );
 });
 
