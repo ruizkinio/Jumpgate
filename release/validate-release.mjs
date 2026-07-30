@@ -109,8 +109,8 @@ export const KODI_RELEASE_POLICY = Object.freeze({
     versionName: "22.0-ALPHA2-Jumpgate-3.0.0",
   }),
   signer: Object.freeze({
-    state: "provisioned",
-    certificateSha256: "10625572b5f34c5125b030dd5ab5fd40bdcd263d0fa8e2073ddee70435970551",
+    state: "not-yet-provisioned",
+    certificateSha256: null,
   }),
 });
 
