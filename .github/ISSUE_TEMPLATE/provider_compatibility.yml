@@ -1,0 +1,111 @@
+name: Provider compatibility
+description: Report a stream or subtitle provider class that does not work through Jumpgate.
+title: "[Provider]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This form is for public compatibility triage, not private provider debugging. Do not post a configured addon URL, manifest URL containing configuration, provider response, playback URL, headers, cookies, torrent credentials, account name, media title, or raw log.
+
+        A transport may play without a canonical source claim. That is intentionally local-only and is not itself a Trakt bug.
+  - type: checkboxes
+    id: public_report_checks
+    attributes:
+      label: Public report checks
+      options:
+        - label: This is not a security vulnerability or cross-profile data report.
+          required: true
+        - label: I removed every private URL, capability, identifier, credential, provider payload, media title, and raw log.
+          required: true
+        - label: I tested the same result in Stremio and confirmed the provider returned a playable or subtitle resource there.
+          required: true
+  - type: dropdown
+    id: provider_class
+    attributes:
+      label: Provider class
+      options:
+        - Aggregator
+        - Debrid
+        - Direct HTTP or HTTPS
+        - Playlist-backed
+        - Torrent-backed
+        - Addon-proxied or signed redirect
+        - Text subtitle
+        - ASS or SSA subtitle
+        - VobSub subtitle
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: public_provider_name
+    attributes:
+      label: Public provider or addon name
+      description: Optional. Use only a public project name with no account, configuration, host, or URL.
+    validations:
+      required: false
+  - type: dropdown
+    id: transport
+    attributes:
+      label: Transport or subtitle format
+      options:
+        - HTTP or HTTPS video
+        - M3U or M3U8
+        - MKV
+        - MP4
+        - M2TS
+        - Torrent
+        - SRT or WebVTT
+        - ASS or SSA
+        - VobSub IDX/SUB
+        - Unknown or other
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Coordinated release and environment
+      placeholder: "Jumpgate 3.0.0; Bridge 3.0.0; Stremio x.y.z; Android/API; ABI"
+    validations:
+      required: true
+  - type: dropdown
+    id: outcome
+    attributes:
+      label: Outcome
+      options:
+        - Provider result is missing from Jumpgate
+        - Result is present but playback does not start
+        - Playback starts but later fails
+        - Playback works but a canonical source claim is unexpectedly missing
+        - Subtitle result is missing
+        - Subtitle is offered but cannot be selected or rendered
+        - Repeat playback fails after returning to Stremio
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: sanitized_shape
+    attributes:
+      label: Sanitized result shape
+      description: List only field names and transport/format categories. Replace every value with a typed placeholder. Never paste a provider response.
+      placeholder: |
+        Resource type: stream
+        Fields present: url, behaviorHints
+        URL scheme: https
+        Container: m3u8
+        Headers required: yes (values omitted)
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps and observed behavior
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Minimal sanitized diagnostics
+      description: Manually reviewed error lines only. No raw logs, network captures, screenshots, dumps, or URLs.
+      render: shell
+    validations:
+      required: false

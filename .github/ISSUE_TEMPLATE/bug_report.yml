@@ -1,0 +1,123 @@
+name: Bug report
+description: Report a reproducible Jumpgate defect with sanitized evidence.
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Jumpgate is pre-release. Report suspected vulnerabilities through the private security link, never in a public issue.
+
+        Never post configured addon URLs, Stremio install links, pairing codes, management links, profile/device IDs or tokens, provider/debrid URLs or headers, signed media URLs, cookies, credentials, raw logs, dumps, or unreviewed screenshots. Encrypted and short-lived values can still grant access.
+  - type: checkboxes
+    id: public_report_checks
+    attributes:
+      label: Public report checks
+      options:
+        - label: This is not a security vulnerability or suspected cross-profile data exposure.
+          required: true
+        - label: I manually reviewed this report and removed every private URL, capability, identifier, credential, cookie, secret, and raw log.
+          required: true
+        - label: I reproduced this on the coordinated Jumpgate and Bridge versions listed below.
+          required: true
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected component
+      options:
+        - Jumpgate Android external-player lifecycle
+        - Jumpgate Android standalone Kodi behavior
+        - Jumpgate Manager pairing or profiles
+        - Bridge configuration or provider import
+        - Stream transport or source claim
+        - Local history or resume
+        - Trakt synchronization
+        - Subtitles
+        - Loading overlay or metadata
+        - Release packaging or documentation
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Coordinated release versions
+      description: Include the Jumpgate release and Bridge version or commit. Do not include private origins or configured paths.
+      placeholder: "Jumpgate 3.0.0; Bridge 3.0.0"
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Device and Stremio environment
+      description: Include device model, Android version/API, ABI, and public Stremio version.
+      placeholder: "Device model; Android 14/API 34; arm64-v8a; Stremio x.y.z"
+    validations:
+      required: true
+  - type: dropdown
+    id: launch_mode
+    attributes:
+      label: Launch mode
+      options:
+        - External player from Stremio
+        - Jumpgate opened directly
+        - Both
+        - Not applicable
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+      description: Describe the smallest repeatable flow using provider and container categories, not private URLs or account details.
+      placeholder: |
+        1. Start from ...
+        2. Select a debrid/playlist/direct provider result using an MKV/M3U8/M2TS transport ...
+        3. Press ...
+        4. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Include only stable error codes or messages that contain no private data.
+    validations:
+      required: true
+  - type: dropdown
+    id: repeat_launch
+    attributes:
+      label: Immediate second playback without force-closing apps
+      options:
+        - Works
+        - Reproduces the issue
+        - Not tested
+        - Not applicable
+    validations:
+      required: true
+  - type: dropdown
+    id: identity
+    attributes:
+      label: Playback identity result
+      description: Transport success and canonical identity are separate. Do not include the title, URL, token, or provider response.
+      options:
+        - Canonical source claim accepted
+        - Local-only playback as expected
+        - Unexpected missing source claim
+        - Unexpected or incorrect identity
+        - Unknown or not applicable
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Minimal sanitized diagnostics
+      description: Paste only manually reviewed lines for the relevant timestamp. Do not attach a raw log, HAR, dump, database, or APK.
+      render: shell
+    validations:
+      required: false

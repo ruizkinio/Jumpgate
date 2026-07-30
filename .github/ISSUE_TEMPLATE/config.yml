@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Private security report
+    url: https://github.com/ruizkinio/Jumpgate/security/advisories/new
+    about: Report suspected vulnerabilities privately. Never include live credentials.
+  - name: Setup and troubleshooting guide
+    url: https://github.com/ruizkinio/Jumpgate/blob/main/SUPPORT.md
+    about: Read the supported evidence and redaction rules before opening an issue.
