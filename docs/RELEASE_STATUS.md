@@ -2,15 +2,15 @@
 
 No coordinated Jumpgate release is ready as of 2026-07-29. The production Bridge is
 deployed at immutable digest
-`sha256:dc3870784a27f3e2849f7b339b055b4faa6ba3b3345a0d85a1e0baf1ee5f5d51`.
-Protected run `30500105428` binds that digest to two healthy v6 Machines, public smoke,
+`sha256:d3c5acfb4b85e517c48ba7b2d37115f1249ec7b1ad6cb315e10d3c8d2f29ceea`.
+Protected run `30503289720` binds that digest to two healthy v6 Machines, public smoke,
 and a GitHub-hosted OIDC deployment attestation. The Bridge is no longer an open
 coordination blocker. The root currently pins these commits,
 both reachable from their public branches:
 
 | Input | Public branch | Candidate commit |
 | --- | --- | --- |
-| Bridge | `Jumpgate-bridge/main` | `6a48e2088b6815045f477b619b5940664f1e1695` |
+| Bridge | `Jumpgate-bridge/main` | `0b0d6786673a749ce7f30769b96acef837865fea` |
 | Kodi | `Jumpgate-kodi/master` | `35bf6b23f84faff14e9372abe0e6f2fcbb153617` |
 
 ## Blockers
