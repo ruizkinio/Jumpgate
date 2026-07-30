@@ -344,8 +344,8 @@ test("candidate metadata cannot override release security policy", () => {
   );
   assert.equal(KODI_RELEASE_POLICY.apkManifest.applicationId, "io.github.ruizkinio.jumpgate");
   assert.deepEqual(KODI_RELEASE_POLICY.signer, {
-    state: "provisioned",
-    certificateSha256: "10625572b5f34c5125b030dd5ab5fd40bdcd263d0fa8e2073ddee70435970551",
+    state: "not-yet-provisioned",
+    certificateSha256: null,
   });
 
   const selectedCoreFix = candidate();
@@ -1137,7 +1137,7 @@ test("readiness derives every publication proof independently", () => {
     }),
     [
       "required component pull requests are not merged into the candidate: Kodi#5",
-      "the locked APK bytes, manifests, and signing certificates have not been independently verified",
+      "the Kodi release signer is explicitly not yet provisioned; current APKs are ephemeral",
       "the deployed Bridge digest lacks a candidate-bound deployment attestation artifact",
       "the configured public Stremio release does not contain the required core fix",
       "sanitized physical phone and TV UAT evidence is absent",
