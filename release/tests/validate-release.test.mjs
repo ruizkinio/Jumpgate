@@ -373,11 +373,17 @@ test("release-critical Kodi PR requires exact candidate and PR head tree equalit
   const pull = {
     number: 5,
     merged_at: "2026-07-29T10:00:00Z",
+    merge_commit_sha: "5".repeat(40),
     base: { ref: "master", repo: { full_name: "ruizkinio/Jumpgate-kodi" } },
     head: { sha: head, repo: { full_name: "ruizkinio/Jumpgate-kodi" } },
   };
   const candidateGitCommit = { sha: component.commit, tree: { sha: tree } };
   const pullHeadGitCommit = { sha: head, tree: { sha: tree } };
+  const mergeAncestor = {
+    status: "ahead",
+    base_commit: { sha: pull.merge_commit_sha },
+    merge_base_commit: { sha: pull.merge_commit_sha },
+  };
   assert.equal(
     pullRequestHeadTreeMatchesCandidate(
       pull,
@@ -385,6 +391,7 @@ test("release-critical Kodi PR requires exact candidate and PR head tree equalit
       candidateGitCommit,
       pullHeadGitCommit,
       COMPONENT_POLICIES.kodi,
+      mergeAncestor,
     ),
     true,
   );
@@ -398,6 +405,38 @@ test("release-critical Kodi PR requires exact candidate and PR head tree equalit
       revertedCandidate,
       pullHeadGitCommit,
       COMPONENT_POLICIES.kodi,
+      mergeAncestor,
+    ),
+    false,
+  );
+
+  const missingMergeCommit = structuredClone(pull);
+  delete missingMergeCommit.merge_commit_sha;
+  assert.equal(
+    pullRequestHeadTreeMatchesCandidate(
+      missingMergeCommit,
+      component,
+      candidateGitCommit,
+      pullHeadGitCommit,
+      COMPONENT_POLICIES.kodi,
+      null,
+    ),
+    false,
+  );
+
+  const divergedMerge = {
+    status: "diverged",
+    base_commit: { sha: pull.merge_commit_sha },
+    merge_base_commit: { sha: "0".repeat(40) },
+  };
+  assert.equal(
+    pullRequestHeadTreeMatchesCandidate(
+      pull,
+      component,
+      candidateGitCommit,
+      pullHeadGitCommit,
+      COMPONENT_POLICIES.kodi,
+      divergedMerge,
     ),
     false,
   );
