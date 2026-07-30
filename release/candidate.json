@@ -5,24 +5,24 @@
     "bridge": {
       "repository": "https://github.com/ruizkinio/Jumpgate-bridge.git",
       "branch": "main",
-      "commit": "0b0d6786673a749ce7f30769b96acef837865fea",
-      "imageDigest": "sha256:d3c5acfb4b85e517c48ba7b2d37115f1249ec7b1ad6cb315e10d3c8d2f29ceea",
+      "commit": "21b3fbd6487fc7c353727b77883aa3cfc0a49e76",
+      "imageDigest": "sha256:5196797aea9943fffd87ceede8fe1b0a37b008498918f10e5898d9502e59607c",
       "provenance": {
-        "runUrl": "https://github.com/ruizkinio/Jumpgate-bridge/actions/runs/30503289720",
+        "runUrl": "https://github.com/ruizkinio/Jumpgate-bridge/actions/runs/30515845255",
         "workflowId": 320575057,
         "workflowPath": ".github/workflows/fly-deploy.yml",
         "event": "push",
         "branch": "main",
         "headRepository": "ruizkinio/Jumpgate-bridge",
         "imageArtifact": {
-          "id": 8744350123,
-          "name": "jumpgate-image-0b0d6786673a749ce7f30769b96acef837865fea",
-          "archiveDigest": "sha256:abcd44d320ec3344e8ddccadef6af35210ed8b329ad842ac0f1afa19d14feb44"
+          "id": 8748860682,
+          "name": "jumpgate-image-21b3fbd6487fc7c353727b77883aa3cfc0a49e76",
+          "archiveDigest": "sha256:4baff6ed18da301de773b0bb8aab827e257891b95c7c6f10a4951638c1147f16"
         },
         "deploymentAttestationArtifact": {
-          "id": 8744514045,
-          "name": "jumpgate-deployment-attestation-30503289720-1-0b0d6786673a749ce7f30769b96acef837865fea",
-          "archiveDigest": "sha256:c119ed160d39577471069b732e42fad04a6cae96bc0a2088d989576e840b797f"
+          "id": 8749019097,
+          "name": "jumpgate-deployment-attestation-30515845255-1-21b3fbd6487fc7c353727b77883aa3cfc0a49e76",
+          "archiveDigest": "sha256:ad7b9a4578df6e169aefc7eeae684cdac2d8e4cd1d56d03f6e5d8a8a4b55e195"
         }
       }
     },
