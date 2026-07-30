@@ -33,7 +33,8 @@ private Bridge that carries the selected Stremio source context to the player.
 ## Requirements
 
 - Android phone, tablet, TV, or streaming box supported by a published Jumpgate APK.
-- Stremio for Android, signed into the account whose addons/providers will be imported.
+- A currently supported Stremio release signed into the account whose addons/providers will be
+  imported: Android Mobile `2.3.2` or Android TV `1.10.4` for this release candidate.
 - A network connection from both apps to the same HTTPS Jumpgate Bridge deployment.
 - Optional Trakt account for cloud scrobbling and history synchronization.
 - Optional TMDB v3 API key for metadata enhancements such as clearlogos. The key is
@@ -177,6 +178,8 @@ Kodi keeps normal Kodi navigation behavior.
 
 ### Stremio spins after returning from Jumpgate
 
+- Do not use Android Mobile `2.1.5`; it has a confirmed identical-stream replay bug. Update to the
+  supported Android Mobile `2.3.2` or Android TV `1.10.4` baseline.
 - Confirm both apps are on the release versions listed together in the same GitHub
   release.
 - Force-close both apps only as a diagnostic; repeated playback must work without that

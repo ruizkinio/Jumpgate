@@ -79,17 +79,18 @@ tokens, headers, cookies, provider responses, account names, or pairing codes.
 14. [`installation-and-pairing/install-gated-before-ready`] Confirm install actions remain
     unavailable before pairing and provider import.
 15. [`installation-and-pairing/stremio-result-contract`] Record the exact public Stremio
-    package/version and prove that its locked
-    `@stremio/stremio-core-web` package contains required Core fix `46091b81`. Inspect the
-    APK and runtime launch to confirm the normal external-player path remains an implicit
-    package-less `ACTION_VIEW` with the selected URI, MIME `video/*`, and activity-result
-    contract. Exercise representative HTTP(S), playlist, and other supported transport
-    schemes; each must resolve Jumpgate, while Android may keep separate scheme-scoped
-    preferences. Using a sanitized development fixture only, confirm Stremio's explicit
-    `externalUrl`/package path does not provide that result contract and therefore remains
-    unsupported. A public Stremio release without that Core fix, or any package/version or
-    intent-shape change, blocks release until this gate and result-bound resume/completion/
-    lifecycle tests pass again.
+    package/version. For supported Android Mobile `2.3.2` and Android TV `1.10.4`, inspect
+    the native APK and runtime launch to confirm the normal external-player path remains an
+    implicit package-less `ACTION_VIEW` with the selected URI, MIME `video/*`, and
+    activity-result contract. Confirm player-screen disposal calls
+    `PlayerViewModel.unload()` and clears the Core Player field. Exercise representative
+    HTTP(S), playlist, and other supported transport schemes; each must resolve Jumpgate,
+    while Android may keep separate scheme-scoped preferences. Using a sanitized
+    development fixture only, confirm Stremio's explicit `externalUrl`/package path does
+    not provide that result contract and therefore remains unsupported. Android Mobile
+    `2.1.5` is unsupported. Any Stremio package/version, lifecycle, or intent-shape change
+    blocks release until this gate and result-bound resume/completion/lifecycle tests pass
+    again.
 16. [`installation-and-pairing/android-player-defaults`] Set Stremio **Settings > Playback
     > Default player** to **External player**. With
     stock Kodi also installed and no preferred media app, confirm Android lists distinct
@@ -161,8 +162,10 @@ For canonical and local-only playback:
 5. [`lifecycle/seek`] Seek backward and forward.
 6. [`lifecycle/back-result`] Dismiss the OSD with Back, then return to Stremio with the
    next Back.
-7. [`lifecycle/repeat-launch`] Immediately start another source without force-closing
-   either app.
+7. [`lifecycle/repeat-launch`] Immediately select the exact same cached stream card again.
+   Confirm Stremio performs a fresh Player load and invokes Jumpgate a second time without
+   a Bridge refresh, app restart, or force-close workaround. Then return and start a
+   structurally different source without force-closing either app.
 8. [`lifecycle/replacement-race`] Rapidly replace source A with B while A still has pending
    metadata/subtitles.
 9. [`lifecycle/completion-threshold`] Stop below completion threshold, then replay and
