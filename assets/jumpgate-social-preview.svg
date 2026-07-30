@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640"
+     viewBox="0 0 1280 640" role="img" aria-labelledby="title desc">
+  <title id="title">Jumpgate</title>
+  <desc id="desc">Kodi playback with exact Stremio source context.</desc>
+  <defs>
+    <style>
+      @font-face {
+        font-family: "Oxanium";
+        src: url("Oxanium-Variable.ttf") format("truetype");
+        font-style: normal;
+        font-weight: 200 800;
+      }
+    </style>
+    <radialGradient id="space" cx="79%" cy="46%" r="74%">
+      <stop offset="0" stop-color="#244f66"/>
+      <stop offset=".3" stop-color="#142b39"/>
+      <stop offset=".68" stop-color="#0a141c"/>
+      <stop offset="1" stop-color="#05080b"/>
+    </radialGradient>
+    <radialGradient id="core">
+      <stop offset="0" stop-color="#f0fdff"/>
+      <stop offset=".1" stop-color="#7ce7ff"/>
+      <stop offset=".35" stop-color="#139bc8" stop-opacity=".64"/>
+      <stop offset="1" stop-color="#07131b" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="ice" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#a6efff"/>
+      <stop offset=".42" stop-color="#29b9e7"/>
+      <stop offset="1" stop-color="#036b96"/>
+    </linearGradient>
+    <linearGradient id="copyFade" x1="0" x2="1">
+      <stop offset="0" stop-color="#05080b" stop-opacity=".52"/>
+      <stop offset=".8" stop-color="#05080b" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="7" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="wideGlow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="26"/>
+    </filter>
+  </defs>
+
+  <rect width="1280" height="640" fill="url(#space)"/>
+  <rect width="760" height="640" fill="url(#copyFade)"/>
+
+  <g fill="#cff5ff" opacity=".48">
+    <circle cx="735" cy="78" r="1.2"/><circle cx="870" cy="130" r="1.5"/>
+    <circle cx="1118" cy="64" r="1.1"/><circle cx="1216" cy="194" r="1.7"/>
+    <circle cx="770" cy="350" r="1.1"/><circle cx="1170" cy="472" r="1.4"/>
+    <circle cx="908" cy="552" r="1.2"/><circle cx="1242" cy="590" r="1.1"/>
+  </g>
+
+  <g stroke="#43c9ef" stroke-width="1.6" opacity=".14">
+    <path d="M736 640 953 370"/><path d="M842 640 973 374"/>
+    <path d="M962 640 993 376"/><path d="M1270 640 1046 372"/>
+    <path d="M1168 640 1026 374"/>
+  </g>
+
+  <ellipse cx="1010" cy="316" rx="254" ry="254" fill="url(#core)"
+           opacity=".3" filter="url(#wideGlow)"/>
+  <g transform="translate(1010 316) rotate(-14)">
+    <circle r="205" fill="none" stroke="#102c3c" stroke-width="34"/>
+    <circle r="188" fill="none" stroke="url(#ice)" stroke-width="11"
+            stroke-dasharray="692 202" filter="url(#glow)"/>
+    <circle r="151" fill="#071018" stroke="#36596d" stroke-width="4"/>
+    <circle r="112" fill="url(#core)" opacity=".82"/>
+    <path d="M-170 0-58-108v58L-108 0l50 50v58z" fill="url(#ice)"/>
+    <path d="M170 0 58-108v58L108 0 58 50v58z" fill="url(#ice)"/>
+    <path d="M-57-108H6l-39 58h-61zM-57 108H6L-33 50h-61z"
+          fill="#ddf8ff" opacity=".9"/>
+    <circle r="11" fill="#effdff" filter="url(#glow)"/>
+  </g>
+
+  <g font-family="Oxanium, Segoe UI, sans-serif">
+    <text x="78" y="116" fill="#6fdfff" font-size="16" font-weight="560"
+          letter-spacing="4.8">SOURCE-AWARE ANDROID PLAYER</text>
+    <text x="72" y="238" fill="#f2fbff" font-size="82" font-weight="680"
+          letter-spacing="7">JUMPGATE</text>
+    <rect x="78" y="266" width="92" height="4" fill="#39c8f2"/>
+    <rect x="178" y="266" width="226" height="1" fill="#31586c"/>
+    <text x="78" y="326" fill="#d6e7ef" font-size="27" font-weight="470"
+          letter-spacing="1.1">KODI PLAYBACK.</text>
+    <text x="78" y="365" fill="#d6e7ef" font-size="27" font-weight="470"
+          letter-spacing="1.1">EXACT STREMIO CONTEXT.</text>
+
+    <g transform="translate(78 486)" font-size="13" font-weight="560"
+       letter-spacing="2.1">
+      <circle cx="5" cy="-5" r="4" fill="#49d4f6"/>
+      <text x="20" y="0" fill="#a9c3cf">PAIRED PROFILE</text>
+      <path d="M160-5h42" stroke="#31586c"/>
+      <circle cx="214" cy="-5" r="4" fill="#49d4f6"/>
+      <text x="229" y="0" fill="#a9c3cf">SOURCE CLAIM</text>
+      <path d="M365-5h42" stroke="#31586c"/>
+      <circle cx="419" cy="-5" r="4" fill="#49d4f6"/>
+      <text x="434" y="0" fill="#a9c3cf">LOCAL HISTORY</text>
+    </g>
+    <text x="78" y="570" fill="#5f7c8a" font-size="13" font-weight="500"
+          letter-spacing="1.7">GITHUB.COM/RUIZKINIO/JUMPGATE</text>
+  </g>
+
+  <path d="M0 586c212-58 424-34 626 24 198 56 414 35 654-35v65H0z"
+        fill="#04070a" opacity=".62"/>
+</svg>
