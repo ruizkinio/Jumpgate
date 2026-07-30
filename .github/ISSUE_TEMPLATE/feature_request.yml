@@ -1,0 +1,69 @@
+name: Feature request
+description: Propose a bounded Jumpgate change with compatibility and privacy impact.
+title: "[Feature]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not disclose vulnerabilities, private configured URLs, provider details, account identifiers, credentials, capabilities, or raw logs in this public form.
+  - type: checkboxes
+    id: proposal_checks
+    attributes:
+      label: Public proposal checks
+      options:
+        - label: This is not a security vulnerability report.
+          required: true
+        - label: This proposal contains no private capability, credential, provider payload, account identifier, or raw log.
+          required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: Describe the user-visible problem without relying on a private provider or account.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Define the smallest observable behavior and its safe failure mode.
+    validations:
+      required: true
+  - type: dropdown
+    id: component
+    attributes:
+      label: Primary component
+      options:
+        - Android external-player lifecycle
+        - Standalone Kodi behavior
+        - Pairing or profiles
+        - Provider import or gateway
+        - Source claims or identity
+        - Local history or resume
+        - Trakt or TMDB
+        - Subtitles
+        - Loading overlay or remote controls
+        - Packaging, documentation, or support
+    validations:
+      required: true
+  - type: textarea
+    id: privacy
+    attributes:
+      label: Privacy and security impact
+      description: State new data, recipients, retention, credentials, permissions, trust boundaries, and abuse cases. Write "None identified" only after considering each item.
+    validations:
+      required: true
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: Compatibility and rollout
+      description: Identify Android, Kodi, Stremio, provider, schema, deployment, and coordinated-release effects.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Include a no-change option and explain why IP, filename, title, artwork, hash, or global fallback identity is not required.
+    validations:
+      required: false
