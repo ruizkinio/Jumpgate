@@ -212,6 +212,12 @@ const SECURITY_SCOPES = Object.freeze({
   "ruizkinio/Jumpgate-kodi": "jumpgate-authored-public-ranges-and-branches",
 });
 
+export const GITLEAKS_POLICY = Object.freeze({
+  scanner: "gitleaks",
+  version: "8.30.1",
+  linuxX64ArchiveSha256: "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb",
+});
+
 function fail(message) {
   throw new Error(message);
 }
@@ -733,13 +739,28 @@ export function validateUatReport(report, run, candidate) {
   return report;
 }
 
+function validateFindingFingerprints(fingerprints, path) {
+  if (!Array.isArray(fingerprints) || fingerprints.length > 100_000) {
+    fail(`${path} must be a bounded array`);
+  }
+  let previous = null;
+  for (const [index, fingerprint] of fingerprints.entries()) {
+    assertHash(fingerprint, `${path}[${index}]`);
+    if (previous !== null && fingerprint <= previous) {
+      fail(`${path} must be sorted and unique`);
+    }
+    previous = fingerprint;
+  }
+  return fingerprints;
+}
+
 export function validateSecurityAudit(evidence, candidate, now = new Date()) {
   assertExactKeys(
     evidence,
     ["schemaVersion", "candidate", "completedAt", "repositories"],
     "security audit",
   );
-  if (evidence.schemaVersion !== 1) fail("security audit schemaVersion must be 1");
+  if (evidence.schemaVersion !== 2) fail("security audit schemaVersion must be 2");
   assertExactValue(evidence.candidate, {
     bridgeCommit: candidate.components.bridge.commit,
     kodiCommit: candidate.components.kodi.commit,
@@ -766,7 +787,10 @@ export function validateSecurityAudit(evidence, candidate, now = new Date()) {
         "auditedRefsSha256",
         "scanner",
         "scannerVersion",
-        "findings",
+        "scannerArchiveSha256",
+        "rawFindings",
+        "allowlistedFindings",
+        "unresolvedFindings",
         "evidenceUrl",
         "evidenceSha256",
       ],
@@ -781,14 +805,24 @@ export function validateSecurityAudit(evidence, candidate, now = new Date()) {
     seen.add(record.repository);
     assertHash(record.auditedRefsSha256, `${path}.auditedRefsSha256`);
     if (
-      typeof record.scanner !== "string" ||
-      !/^[A-Za-z0-9][A-Za-z0-9 ._+-]{0,63}$/.test(record.scanner) ||
-      typeof record.scannerVersion !== "string" ||
-      !/^[A-Za-z0-9][A-Za-z0-9._+-]{0,63}$/.test(record.scannerVersion)
+      record.scanner !== GITLEAKS_POLICY.scanner ||
+      record.scannerVersion !== GITLEAKS_POLICY.version ||
+      record.scannerArchiveSha256 !== GITLEAKS_POLICY.linuxX64ArchiveSha256
     ) {
-      fail(`${path} must identify the exact scanner and version`);
+      fail(`${path} must use the policy-pinned Gitleaks build`);
     }
-    if (record.findings !== 0) fail(`${path}.findings must be zero`);
+    for (const field of ["rawFindings", "allowlistedFindings", "unresolvedFindings"]) {
+      if (!Number.isSafeInteger(record[field]) || record[field] < 0 || record[field] > 100_000) {
+        fail(`${path}.${field} must be a bounded non-negative integer`);
+      }
+    }
+    if (
+      record.allowlistedFindings > record.rawFindings ||
+      record.unresolvedFindings !== record.rawFindings - record.allowlistedFindings
+    ) {
+      fail(`${path} finding counts are inconsistent`);
+    }
+    if (record.unresolvedFindings !== 0) fail(`${path}.unresolvedFindings must be zero`);
     parseEvidenceBlobUrl(record.evidenceUrl, `${path}.evidenceUrl`);
     assertHash(record.evidenceSha256, `${path}.evidenceSha256`);
   }
@@ -805,12 +839,36 @@ export function validateSecurityReport(report, record) {
       "auditedRefsSha256",
       "scanner",
       "scannerVersion",
-      "findings",
+      "scannerArchiveSha256",
+      "rawFindingFingerprints",
+      "allowlistedFindingFingerprints",
+      "unresolvedFindingFingerprints",
       "commands",
     ],
     "security report",
   );
-  if (report.schemaVersion !== 1) fail("security report schemaVersion must be 1");
+  if (report.schemaVersion !== 2) fail("security report schemaVersion must be 2");
+  const raw = validateFindingFingerprints(
+    report.rawFindingFingerprints,
+    "security report.rawFindingFingerprints",
+  );
+  const allowlisted = validateFindingFingerprints(
+    report.allowlistedFindingFingerprints,
+    "security report.allowlistedFindingFingerprints",
+  );
+  const unresolved = validateFindingFingerprints(
+    report.unresolvedFindingFingerprints,
+    "security report.unresolvedFindingFingerprints",
+  );
+  const rawSet = new Set(raw);
+  if (allowlisted.some((fingerprint) => !rawSet.has(fingerprint))) {
+    fail("security report allowlisted findings must be a subset of raw findings");
+  }
+  const allowlistedSet = new Set(allowlisted);
+  const expectedUnresolved = raw.filter((fingerprint) => !allowlistedSet.has(fingerprint));
+  if (expectedUnresolved.join("\n") !== unresolved.join("\n")) {
+    fail("security report unresolved findings must equal raw findings minus the allowlist");
+  }
   assertExactValue(
     {
       repository: report.repository,
@@ -818,7 +876,10 @@ export function validateSecurityReport(report, record) {
       auditedRefsSha256: report.auditedRefsSha256,
       scanner: report.scanner,
       scannerVersion: report.scannerVersion,
-      findings: report.findings,
+      scannerArchiveSha256: report.scannerArchiveSha256,
+      rawFindings: raw.length,
+      allowlistedFindings: allowlisted.length,
+      unresolvedFindings: unresolved.length,
     },
     {
       repository: record.repository,
@@ -826,7 +887,10 @@ export function validateSecurityReport(report, record) {
       auditedRefsSha256: record.auditedRefsSha256,
       scanner: record.scanner,
       scannerVersion: record.scannerVersion,
-      findings: 0,
+      scannerArchiveSha256: record.scannerArchiveSha256,
+      rawFindings: record.rawFindings,
+      allowlistedFindings: record.allowlistedFindings,
+      unresolvedFindings: 0,
     },
     "security report",
   );

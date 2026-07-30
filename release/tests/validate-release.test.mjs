@@ -5,6 +5,7 @@ import test from "node:test";
 
 import {
   COMPONENT_POLICIES,
+  GITLEAKS_POLICY,
   KODI_RELEASE_POLICY,
   PHYSICAL_EVIDENCE_MAX_AGE_MS,
   REQUIRED_UAT_CASES,
@@ -130,15 +131,18 @@ function securityAudit() {
     repository,
     scope,
     auditedRefsSha256: String(index + 1).repeat(64),
-    scanner: "gitleaks",
-    scannerVersion: "8.28.0",
-    findings: 0,
+    scanner: GITLEAKS_POLICY.scanner,
+    scannerVersion: GITLEAKS_POLICY.version,
+    scannerArchiveSha256: GITLEAKS_POLICY.linuxX64ArchiveSha256,
+    rawFindings: 1,
+    allowlistedFindings: 1,
+    unresolvedFindings: 0,
     evidenceUrl:
       `https://github.com/ruizkinio/Jumpgate/blob/${String(index + 4).repeat(40)}/release/evidence/security-${index}.json`,
     evidenceSha256: String(index + 7).repeat(64),
   }));
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     candidate: {
       bridgeCommit: CANDIDATE_TEMPLATE.components.bridge.commit,
       kodiCommit: CANDIDATE_TEMPLATE.components.kodi.commit,
@@ -640,20 +644,48 @@ test("security audit evidence is scoped, zero-finding, and reproducible", () => 
   assert.equal(validateSecurityAudit(audit, candidate(), TEST_NOW), audit);
   const record = audit.repositories[0];
   const report = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     repository: record.repository,
     scope: record.scope,
     auditedRefsSha256: record.auditedRefsSha256,
     scanner: record.scanner,
     scannerVersion: record.scannerVersion,
-    findings: 0,
+    scannerArchiveSha256: record.scannerArchiveSha256,
+    rawFindingFingerprints: ["a".repeat(64)],
+    allowlistedFindingFingerprints: ["a".repeat(64)],
+    unresolvedFindingFingerprints: [],
     commands: ["gitleaks git --redact"],
   };
   assert.equal(validateSecurityReport(report, record), report);
 
   const finding = securityAudit();
-  finding.repositories[1].findings = 1;
-  assert.throws(() => validateSecurityAudit(finding, candidate(), TEST_NOW), /findings must be zero/);
+  finding.repositories[1].rawFindings = 2;
+  finding.repositories[1].unresolvedFindings = 1;
+  assert.throws(
+    () => validateSecurityAudit(finding, candidate(), TEST_NOW),
+    /unresolvedFindings must be zero/,
+  );
+
+  const substitutedScanner = securityAudit();
+  substitutedScanner.repositories[0].scannerVersion = "8.30.2";
+  assert.throws(
+    () => validateSecurityAudit(substitutedScanner, candidate(), TEST_NOW),
+    /policy-pinned Gitleaks/,
+  );
+
+  const forgedAllowlist = structuredClone(report);
+  forgedAllowlist.allowlistedFindingFingerprints = ["b".repeat(64)];
+  assert.throws(
+    () => validateSecurityReport(forgedAllowlist, record),
+    /subset of raw findings/,
+  );
+
+  const omittedUnresolved = structuredClone(report);
+  omittedUnresolved.allowlistedFindingFingerprints = [];
+  assert.throws(
+    () => validateSecurityReport(omittedUnresolved, record),
+    /raw findings minus the allowlist/,
+  );
 });
 
 test("npm SLSA provenance verifies cryptographically before exact statement validation", async () => {
