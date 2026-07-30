@@ -65,8 +65,14 @@ export const COMPONENT_POLICIES = Object.freeze({
         sha256: "f5cb7bca3b60fd7578fe30fd1fde4aff286d05fc77005629af5b6c791934c3b4",
       }),
     ]),
-    requiredPullRequests: Object.freeze([2, 3, 4]),
-    releaseCriticalPullRequest: 5,
+    reviewedHistory: Object.freeze({
+      upstreamBase: "c973d862b2435ecdf2b9b8cfc5aa47dfda15c5c0",
+      developmentPullRequests: Object.freeze([2, 3, 4]),
+      sourceTreePullRequest: 5,
+      sourceBaseBranch: "master",
+      finalTreePullRequest: 6,
+      finalBaseBranch: "release/clean-history-v3",
+    }),
   }),
 });
 
@@ -1153,7 +1159,7 @@ export function readinessBlockers({
   const blockers = [];
   if (missingPullRequests.length) {
     blockers.push(
-      `required component pull requests are not merged into the candidate: ${missingPullRequests.join(", ")}`,
+      `required component review/history proofs are incomplete: ${missingPullRequests.join(", ")}`,
     );
   }
   const releaseSignerProvisioned = releaseSignerIsProvisioned(releaseSignerPolicy);
@@ -1490,82 +1496,137 @@ async function verifyRunArtifactDescriptors(slug, runId, descriptors) {
   }
 }
 
-export function pullRequestHeadTreeMatchesCandidate(
-  pull,
-  component,
-  candidateGitCommit,
-  pullHeadGitCommit,
-  policy,
-  mergeCompare,
-) {
-  const candidateTree = candidateGitCommit?.tree?.sha;
-  const pullHeadTree = pullHeadGitCommit?.tree?.sha;
-  const mergeCommit = pull?.merge_commit_sha;
+export function reviewedCleanHistoryMatchesCandidate(proof, component, policy) {
+  const history = policy.reviewedHistory;
+  const candidate = proof?.candidateGitCommit;
+  const upstreamBase = proof?.upstreamBaseGitCommit;
+  const sourcePull = proof?.sourcePull;
+  const sourceHead = proof?.sourceHeadGitCommit;
+  const finalPull = proof?.finalPull;
+  const finalBase = proof?.finalBaseGitCommit;
+  const finalMerge = proof?.finalMergeGitCommit;
+  const developmentPulls = proof?.developmentPulls;
+  const developmentCompares = proof?.developmentCompares;
+  const candidateTree = candidate?.tree?.sha;
+  const sourceTree = sourceHead?.tree?.sha;
+  const finalBaseTree = finalBase?.tree?.sha;
+  const finalTree = finalMerge?.tree?.sha;
+
+  // The source PR is review evidence only: merging it would import the retired development ancestry.
   return Boolean(
-    pull?.number === policy.releaseCriticalPullRequest &&
-      pull.merged_at &&
-      /^[0-9a-f]{40}$/.test(mergeCommit ?? "") &&
-      pull.base?.ref === policy.branch &&
-      pull.base?.repo?.full_name === policy.slug &&
-      pull.head?.repo?.full_name === policy.slug &&
-      pull.head?.sha === pullHeadGitCommit?.sha &&
-      component.commit === candidateGitCommit?.sha &&
-      commitContainsAncestor(mergeCompare, mergeCommit, component.commit) &&
+    history &&
+      component.commit === candidate?.sha &&
+      Array.isArray(candidate?.parents) &&
+      candidate.parents.length === 1 &&
+      candidate.parents[0]?.sha === history.upstreamBase &&
+      upstreamBase?.sha === history.upstreamBase &&
+      sourcePull?.number === history.sourceTreePullRequest &&
+      sourcePull.merged_at === null &&
+      sourcePull.base?.ref === history.sourceBaseBranch &&
+      sourcePull.base?.repo?.full_name === policy.slug &&
+      sourcePull.head?.repo?.full_name === policy.slug &&
+      sourcePull.head?.sha === sourceHead?.sha &&
+      finalPull?.number === history.finalTreePullRequest &&
+      finalPull.merged_at &&
+      finalPull.base?.ref === history.finalBaseBranch &&
+      finalPull.base?.repo?.full_name === policy.slug &&
+      finalPull.head?.repo?.full_name === policy.slug &&
+      finalPull.base?.sha === finalBase?.sha &&
+      finalPull.merge_commit_sha === finalMerge?.sha &&
       /^[0-9a-f]{40}$/.test(candidateTree ?? "") &&
-      candidateTree === pullHeadTree,
+      candidateTree === finalTree &&
+      /^[0-9a-f]{40}$/.test(sourceTree ?? "") &&
+      sourceTree === finalBaseTree &&
+      Array.isArray(developmentPulls) &&
+      Array.isArray(developmentCompares) &&
+      developmentPulls.length === history.developmentPullRequests.length &&
+      developmentCompares.length === history.developmentPullRequests.length &&
+      history.developmentPullRequests.every((number, index) => {
+        const pull = developmentPulls[index];
+        return Boolean(
+          pull?.number === number &&
+            pull.merged_at &&
+            /^[0-9a-f]{40}$/.test(pull.merge_commit_sha ?? "") &&
+            pull.base?.repo?.full_name === policy.slug &&
+            pull.head?.repo?.full_name === policy.slug &&
+            commitContainsAncestor(developmentCompares[index], pull.merge_commit_sha, sourceHead.sha),
+        );
+      }),
   );
 }
 
-async function releaseCriticalPullRequestMissing(component, policy, name) {
-  const number = policy.releaseCriticalPullRequest;
-  if (!number) return null;
-  const pull = await fetchJson(`https://api.github.com/repos/${policy.slug}/pulls/${number}`);
-  if (
-    !pull?.merged_at ||
-    !/^[0-9a-f]{40}$/.test(pull.head?.sha ?? "") ||
-    !/^[0-9a-f]{40}$/.test(pull.merge_commit_sha ?? "")
-  ) {
-    return `${name}#${number}`;
-  }
-  const [candidateGitCommit, pullHeadGitCommit, mergeCompare] = await Promise.all([
-    fetchJson(`https://api.github.com/repos/${policy.slug}/git/commits/${component.commit}`),
-    fetchJson(`https://api.github.com/repos/${policy.slug}/git/commits/${pull.head.sha}`),
-    githubCompare(policy.slug, pull.merge_commit_sha, component.commit),
-  ]);
-  return pullRequestHeadTreeMatchesCandidate(
-    pull,
-    component,
-    candidateGitCommit,
-    pullHeadGitCommit,
-    policy,
-    mergeCompare,
-  )
-    ? null
-    : `${name}#${number}`;
+async function missingRequiredPullRequests(component, policy, name) {
+  const checks = await Promise.all(policy.requiredPullRequests.map(async (number) => {
+    const pull = await fetchJson(`https://api.github.com/repos/${policy.slug}/pulls/${number}`);
+    if (!pull.merged_at || !pull.merge_commit_sha) {
+      return `${name}#${number}`;
+    }
+    const compare = await githubCompare(policy.slug, pull.merge_commit_sha, component.commit);
+    if (!commitContainsAncestor(compare, pull.merge_commit_sha, component.commit)) {
+      return `${name}#${number}`;
+    }
+    return null;
+  }));
+  return checks.filter(Boolean);
 }
 
-async function missingRequiredPullRequests(component, policy, name) {
-  const checks = await Promise.all([
-    ...policy.requiredPullRequests.map(async (number) => {
-      const pull = await fetchJson(`https://api.github.com/repos/${policy.slug}/pulls/${number}`);
-      if (!pull.merged_at || !pull.merge_commit_sha) {
-        return `${name}#${number}`;
-      }
-      const compare = await githubCompare(policy.slug, pull.merge_commit_sha, component.commit);
-      if (!commitContainsAncestor(compare, pull.merge_commit_sha, component.commit)) {
-        return `${name}#${number}`;
-      }
-      return null;
-    }),
-    releaseCriticalPullRequestMissing(component, policy, name),
-  ]);
-  return checks.filter(Boolean);
+async function reviewedKodiHistoryMissing(component, policy) {
+  const history = policy.reviewedHistory;
+  const [candidateGitCommit, upstreamBaseGitCommit, sourcePull, finalPull, ...developmentPulls] =
+    await Promise.all([
+      fetchJson(`https://api.github.com/repos/${policy.slug}/git/commits/${component.commit}`),
+      fetchJson(
+        `https://api.github.com/repos/${KODI_UPSTREAM_REPOSITORY}/git/commits/${history.upstreamBase}`,
+      ),
+      fetchJson(
+        `https://api.github.com/repos/${policy.slug}/pulls/${history.sourceTreePullRequest}`,
+      ),
+      fetchJson(`https://api.github.com/repos/${policy.slug}/pulls/${history.finalTreePullRequest}`),
+      ...history.developmentPullRequests.map((number) =>
+        fetchJson(`https://api.github.com/repos/${policy.slug}/pulls/${number}`),
+      ),
+    ]);
+  if (
+    !/^[0-9a-f]{40}$/.test(sourcePull?.head?.sha ?? "") ||
+    !/^[0-9a-f]{40}$/.test(finalPull?.base?.sha ?? "") ||
+    !/^[0-9a-f]{40}$/.test(finalPull?.merge_commit_sha ?? "")
+  ) {
+    return ["Kodi clean-history review chain"];
+  }
+  const [sourceHeadGitCommit, finalBaseGitCommit, finalMergeGitCommit, ...developmentCompares] =
+    await Promise.all([
+      fetchJson(`https://api.github.com/repos/${policy.slug}/git/commits/${sourcePull.head.sha}`),
+      fetchJson(`https://api.github.com/repos/${policy.slug}/git/commits/${finalPull.base.sha}`),
+      fetchJson(
+        `https://api.github.com/repos/${policy.slug}/git/commits/${finalPull.merge_commit_sha}`,
+      ),
+      ...developmentPulls.map((pull) =>
+        githubCompare(policy.slug, pull.merge_commit_sha, sourcePull.head.sha),
+      ),
+    ]);
+  return reviewedCleanHistoryMatchesCandidate(
+    {
+      candidateGitCommit,
+      upstreamBaseGitCommit,
+      sourcePull,
+      sourceHeadGitCommit,
+      finalPull,
+      finalBaseGitCommit,
+      finalMergeGitCommit,
+      developmentPulls,
+      developmentCompares,
+    },
+    component,
+    policy,
+  )
+    ? []
+    : ["Kodi clean-history review chain"];
 }
 
 async function verifyPublicCandidate(candidate) {
   const [bridgeMissing, kodiMissing, bridgeRunId, kodiRunId] = await Promise.all([
     missingRequiredPullRequests(candidate.components.bridge, COMPONENT_POLICIES.bridge, "Bridge"),
-    missingRequiredPullRequests(candidate.components.kodi, COMPONENT_POLICIES.kodi, "Kodi"),
+    reviewedKodiHistoryMissing(candidate.components.kodi, COMPONENT_POLICIES.kodi),
     verifyProvenanceRun(candidate.components.bridge, COMPONENT_POLICIES.bridge, "Bridge"),
     verifyProvenanceRun(candidate.components.kodi, COMPONENT_POLICIES.kodi, "Kodi"),
     verifyComponentCommit(candidate.components.bridge, COMPONENT_POLICIES.bridge, "Bridge"),
