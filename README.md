@@ -149,6 +149,13 @@ In external-player mode, Back first dismisses Kodi's OSD when it is visible. The
 Back returns the result to Stremio instead of opening Kodi's home screen. Standalone
 Kodi keeps normal Kodi navigation behavior.
 
+Stremio Android TV `1.10.4` currently opens **Who's watching?** after an
+external-player round trip for Premium accounts with profiles, even when Stremio stayed
+alive and received the playback result. Reselect the same profile to continue. Jumpgate
+cannot safely suppress another app's profile screen, and it never guesses or automates a
+Stremio profile. This upstream issue is tracked in
+[`Stremio/stremio-bugs#2708`](https://github.com/Stremio/stremio-bugs/issues/2708).
+
 ## Troubleshooting
 
 ### Pairing fails
@@ -186,6 +193,14 @@ Kodi keeps normal Kodi navigation behavior.
   workaround before a build is considered release-ready.
 - Include sanitized version numbers and reproduction steps in an issue, but never a
   configured addon URL, bearer token, provider URL, or raw private log.
+
+### Stremio asks "Who's watching?" after playback
+
+- On Android TV `1.10.4`, this is a confirmed Stremio limitation for Premium accounts
+  with profiles, not proof that Jumpgate lost the playback result.
+- Reselect the same profile. The same stream must then launch again without force-closing
+  Stremio or Jumpgate; an infinite spinner or failed relaunch is still a bug.
+- Do not clear Stremio data or ask Jumpgate to select an account profile automatically.
 
 ### No clearlogo appears
 

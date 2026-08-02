@@ -11,6 +11,10 @@ playback or provider compatibility problem.
   the affected repository. Do not open a public issue first.
 - Kodi engine behavior that also reproduces in unmodified Kodi belongs upstream; state
   clearly whether you reproduced it there.
+- Stremio Android TV `1.10.4` reopening **Who's watching?** after an external-player
+  round trip is tracked upstream as
+  [`Stremio/stremio-bugs#2708`](https://github.com/Stremio/stremio-bugs/issues/2708).
+  A spinner or failed replay after reselecting the profile still belongs in Jumpgate issues.
 
 ## Include
 
