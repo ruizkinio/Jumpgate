@@ -164,13 +164,18 @@ For canonical and local-only playback:
 5. [`lifecycle/seek`] Seek backward and forward.
 6. [`lifecycle/back-result`] Dismiss the OSD with Back, then return to Stremio with the
    next Back.
-7. [`lifecycle/repeat-launch`] Immediately select the exact same cached stream card again.
+7. [`lifecycle/stremio-tv-premium-profile-return`] On Android TV `1.10.4` with a Premium
+   multi-profile account, record whether Stremio shows **Who's watching?** after the
+   return. If it does, select the same profile without restarting either app. This is
+   tracked upstream as `Stremio/stremio-bugs#2708` and does not waive any result, task,
+   history, or replay requirement.
+8. [`lifecycle/repeat-launch`] Immediately select the exact same cached stream card again.
    Confirm Stremio performs a fresh Player load and invokes Jumpgate a second time without
    a Bridge refresh, app restart, or force-close workaround. Then return and start a
    structurally different source without force-closing either app.
-8. [`lifecycle/replacement-race`] Rapidly replace source A with B while A still has pending
+9. [`lifecycle/replacement-race`] Rapidly replace source A with B while A still has pending
    metadata/subtitles.
-9. [`lifecycle/completion-threshold`] Stop below completion threshold, then replay and
+10. [`lifecycle/completion-threshold`] Stop below completion threshold, then replay and
    complete above the threshold.
 
 Pass conditions:
@@ -185,6 +190,11 @@ Pass conditions:
   process restart.
 - [`lifecycle/standalone-after-external`] Standalone mode remains unaffected after
   external-player use.
+- [`lifecycle/stremio-tv-premium-profile-picker-boundary`] The Android TV `1.10.4`
+  Premium profile picker is accepted only when the pinned Stremio APK and same process
+  are proven, Jumpgate's exact terminal result and local history are durable, its
+  external task exits, and same-card replay passes after reselecting the profile. It
+  cannot excuse a spinner, missing result, stale task, or force-close workaround.
 
 ## Trakt
 
