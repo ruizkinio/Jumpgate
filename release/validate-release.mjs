@@ -16,6 +16,7 @@ export const COMPONENT_POLICIES = Object.freeze({
     workflow: "Bridge CI and Release",
     workflowId: 320575057,
     workflowPath: ".github/workflows/fly-deploy.yml",
+    event: "push",
     auditedFiles: Object.freeze([
       Object.freeze({
         path: ".github/workflows/fly-deploy.yml",
@@ -61,6 +62,7 @@ export const COMPONENT_POLICIES = Object.freeze({
     workflow: "Jumpgate Android CI",
     workflowId: 312418811,
     workflowPath: ".github/workflows/jumpgate-android.yml",
+    event: "push",
     auditedFiles: Object.freeze([
       Object.freeze({
         path: ".github/workflows/jumpgate-android.yml",
@@ -361,11 +363,14 @@ function validateProvenance(provenance, policy, path, extraKeys = []) {
   if (
     provenance.workflowId !== policy.workflowId ||
     provenance.workflowPath !== policy.workflowPath ||
-    provenance.event !== "push" ||
+    provenance.event !== policy.event ||
     provenance.branch !== policy.branch ||
     provenance.headRepository !== policy.slug
   ) {
-    fail(`${path} must identify the protected push workflow on ${policy.slug}#${policy.branch}`);
+    fail(
+      `${path} must identify the protected ${policy.event} workflow on ` +
+        `${policy.slug}#${policy.branch}`,
+    );
   }
 }
 
@@ -1459,14 +1464,21 @@ async function verifyComponentCommit(component, policy, name) {
   }
 }
 
-async function verifyProvenanceRun(component, policy, name) {
+export function expectedWorkflowRunName(component, policy, coordinatedVersion) {
+  return policy.event === "workflow_dispatch"
+    ? `Release v${coordinatedVersion} from ${component.commit}`
+    : policy.workflow;
+}
+
+async function verifyProvenanceRun(component, policy, name, coordinatedVersion) {
   const provenance = component.provenance;
   const runId = parseGithubActionsRunUrl(provenance.runUrl, policy.slug);
   const run = await fetchJson(`https://api.github.com/repos/${policy.slug}/actions/runs/${runId}`);
+  const expectedRunName = expectedWorkflowRunName(component, policy, coordinatedVersion);
   if (
     run.html_url !== provenance.runUrl ||
     run.head_sha !== component.commit ||
-    run.name !== policy.workflow ||
+    run.name !== expectedRunName ||
     run.workflow_id !== policy.workflowId ||
     run.path !== policy.workflowPath ||
     run.event !== provenance.event ||
@@ -1694,8 +1706,18 @@ async function verifyPublicCandidate(candidate) {
   const [bridgeMissing, kodiMissing, bridgeRunId, kodiRunId] = await Promise.all([
     missingRequiredPullRequests(candidate.components.bridge, COMPONENT_POLICIES.bridge, "Bridge"),
     reviewedKodiHistoryMissing(candidate.components.kodi, COMPONENT_POLICIES.kodi),
-    verifyProvenanceRun(candidate.components.bridge, COMPONENT_POLICIES.bridge, "Bridge"),
-    verifyProvenanceRun(candidate.components.kodi, COMPONENT_POLICIES.kodi, "Kodi"),
+      verifyProvenanceRun(
+        candidate.components.bridge,
+        COMPONENT_POLICIES.bridge,
+        "Bridge",
+        candidate.coordinatedVersion,
+      ),
+      verifyProvenanceRun(
+        candidate.components.kodi,
+        COMPONENT_POLICIES.kodi,
+        "Kodi",
+        candidate.coordinatedVersion,
+      ),
     verifyComponentCommit(candidate.components.bridge, COMPONENT_POLICIES.bridge, "Bridge"),
     verifyComponentCommit(candidate.components.kodi, COMPONENT_POLICIES.kodi, "Kodi"),
     verifyComponentAuditedFiles(

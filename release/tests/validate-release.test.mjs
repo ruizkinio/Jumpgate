@@ -13,6 +13,7 @@ import {
   STREMIO_RELEASE_POLICY,
   commitContainsAncestor,
   extractZipEntry,
+  expectedWorkflowRunName,
   parseAapt2Badging,
   parseApkSignerCertificate,
   parseEvidenceBlobUrl,
@@ -502,6 +503,22 @@ test("rewritten Kodi history requires the exact clean anchor and protected PR ch
   assert.deepEqual(COMPONENT_POLICIES.bridge.requiredPullRequests, [
     1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
   ]);
+});
+
+test("workflow run names distinguish protected pushes from stable release dispatches", () => {
+  const component = { commit: "a".repeat(40) };
+  assert.equal(
+    expectedWorkflowRunName(component, COMPONENT_POLICIES.bridge, "3.0.0"),
+    "Bridge CI and Release",
+  );
+  assert.equal(
+    expectedWorkflowRunName(
+      component,
+      { workflow: "Jumpgate Android Release", event: "workflow_dispatch" },
+      "3.0.0",
+    ),
+    `Release v3.0.0 from ${component.commit}`,
+  );
 });
 
 test("audited component executable closures are exact and reject byte or policy drift", async () => {
