@@ -19,11 +19,11 @@ export const COMPONENT_POLICIES = Object.freeze({
     auditedFiles: Object.freeze([
       Object.freeze({
         path: ".github/workflows/fly-deploy.yml",
-        sha256: "1c2cc3f72ea000b489218e612319a87131c4d4f4b5e4faf2eeecf857dc2305ab",
+        sha256: "a4998b4064cf98c5bba6bd8cfeb782e53a66a77a2c126049701dd5e1870599eb",
       }),
       Object.freeze({
         path: "scripts/ci/fly-managed-rollout.js",
-        sha256: "2e0af3926869a36c3d81f44bb59cb5cfda49a0d8bb03c8e96b8c780a2ff2bad0",
+        sha256: "9cc954b815c012130e636f9fc2944873561efe7d1b3cf9f1bb7068f9cee7245f",
       }),
       Object.freeze({
         path: "scripts/ci/deployment-attestation.js",
@@ -47,10 +47,12 @@ export const COMPONENT_POLICIES = Object.freeze({
       }),
       Object.freeze({
         path: "fly.toml",
-        sha256: "b594218d0650290789fbe97f64bd29da217c73c1c06a9e12002df9cbd12cfb23",
+        sha256: "723cfbe7a912d2d2bd0b70f7e113d6e676349825a5a875d250a891a09dc05c99",
       }),
     ]),
-    requiredPullRequests: Object.freeze([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]),
+    requiredPullRequests: Object.freeze([
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
+    ]),
   }),
   kodi: Object.freeze({
     repository: "https://github.com/ruizkinio/Jumpgate-kodi.git",
@@ -72,6 +74,9 @@ export const COMPONENT_POLICIES = Object.freeze({
       sourceBaseBranch: "master",
       finalTreePullRequest: 6,
       finalBaseBranch: "release/clean-history-v3",
+      cleanAnchor: "d48dbc6df68826c39636a511a8d08496134d98a7",
+      protectedBranch: "master",
+      postCleanPullRequests: Object.freeze([7, 8, 10, 11, 12, 13, 14, 15]),
     }),
   }),
 });
@@ -1499,6 +1504,7 @@ async function verifyRunArtifactDescriptors(slug, runId, descriptors) {
 export function reviewedCleanHistoryMatchesCandidate(proof, component, policy) {
   const history = policy.reviewedHistory;
   const candidate = proof?.candidateGitCommit;
+  const cleanAnchor = proof?.cleanAnchorGitCommit;
   const upstreamBase = proof?.upstreamBaseGitCommit;
   const sourcePull = proof?.sourcePull;
   const sourceHead = proof?.sourceHeadGitCommit;
@@ -1507,18 +1513,23 @@ export function reviewedCleanHistoryMatchesCandidate(proof, component, policy) {
   const finalMerge = proof?.finalMergeGitCommit;
   const developmentPulls = proof?.developmentPulls;
   const developmentCompares = proof?.developmentCompares;
+  const postCleanPulls = proof?.postCleanPulls;
+  const postCleanMergeGitCommits = proof?.postCleanMergeGitCommits;
   const candidateTree = candidate?.tree?.sha;
+  const cleanAnchorTree = cleanAnchor?.tree?.sha;
   const sourceTree = sourceHead?.tree?.sha;
   const finalBaseTree = finalBase?.tree?.sha;
   const finalTree = finalMerge?.tree?.sha;
 
   // The source PR is review evidence only: merging it would import the retired development ancestry.
+  // The clean anchor reproduces that reviewed tree, then protected PR merges continue from it exactly.
   return Boolean(
     history &&
       component.commit === candidate?.sha &&
-      Array.isArray(candidate?.parents) &&
-      candidate.parents.length === 1 &&
-      candidate.parents[0]?.sha === history.upstreamBase &&
+      cleanAnchor?.sha === history.cleanAnchor &&
+      Array.isArray(cleanAnchor?.parents) &&
+      cleanAnchor.parents.length === 1 &&
+      cleanAnchor.parents[0]?.sha === history.upstreamBase &&
       upstreamBase?.sha === history.upstreamBase &&
       sourcePull?.number === history.sourceTreePullRequest &&
       sourcePull.merged_at === null &&
@@ -1533,8 +1544,13 @@ export function reviewedCleanHistoryMatchesCandidate(proof, component, policy) {
       finalPull.head?.repo?.full_name === policy.slug &&
       finalPull.base?.sha === finalBase?.sha &&
       finalPull.merge_commit_sha === finalMerge?.sha &&
+      Array.isArray(finalMerge?.parents) &&
+      finalMerge.parents.length === 2 &&
+      finalMerge.parents[0]?.sha === finalBase?.sha &&
+      finalMerge.parents[1]?.sha === finalPull.head?.sha &&
       /^[0-9a-f]{40}$/.test(candidateTree ?? "") &&
-      candidateTree === finalTree &&
+      /^[0-9a-f]{40}$/.test(cleanAnchorTree ?? "") &&
+      cleanAnchorTree === finalTree &&
       /^[0-9a-f]{40}$/.test(sourceTree ?? "") &&
       sourceTree === finalBaseTree &&
       Array.isArray(developmentPulls) &&
@@ -1551,7 +1567,33 @@ export function reviewedCleanHistoryMatchesCandidate(proof, component, policy) {
             pull.head?.repo?.full_name === policy.slug &&
             commitContainsAncestor(developmentCompares[index], pull.merge_commit_sha, sourceHead.sha),
         );
-      }),
+      }) &&
+      Array.isArray(postCleanPulls) &&
+      Array.isArray(postCleanMergeGitCommits) &&
+      postCleanPulls.length === history.postCleanPullRequests.length &&
+      postCleanMergeGitCommits.length === history.postCleanPullRequests.length &&
+      history.postCleanPullRequests.every((number, index) => {
+        const pull = postCleanPulls[index];
+        const merge = postCleanMergeGitCommits[index];
+        const previousSha = index === 0
+          ? cleanAnchor.sha
+          : postCleanMergeGitCommits[index - 1]?.sha;
+        return Boolean(
+          pull?.number === number &&
+            pull.merged_at &&
+            pull.base?.ref === history.protectedBranch &&
+            pull.base?.repo?.full_name === policy.slug &&
+            pull.head?.repo?.full_name === policy.slug &&
+            pull.base?.sha === previousSha &&
+            /^[0-9a-f]{40}$/.test(pull.head?.sha ?? "") &&
+            pull.merge_commit_sha === merge?.sha &&
+            Array.isArray(merge?.parents) &&
+            merge.parents.length === 2 &&
+            merge.parents[0]?.sha === previousSha &&
+            merge.parents[1]?.sha === pull.head.sha,
+        );
+      }) &&
+      postCleanMergeGitCommits.at(-1)?.sha === candidate.sha,
   );
 }
 
@@ -1572,9 +1614,9 @@ async function missingRequiredPullRequests(component, policy, name) {
 
 async function reviewedKodiHistoryMissing(component, policy) {
   const history = policy.reviewedHistory;
-  const [candidateGitCommit, upstreamBaseGitCommit, sourcePull, finalPull, ...developmentPulls] =
-    await Promise.all([
+  const initialProof = await Promise.all([
       fetchJson(`https://api.github.com/repos/${policy.slug}/git/commits/${component.commit}`),
+      fetchJson(`https://api.github.com/repos/${policy.slug}/git/commits/${history.cleanAnchor}`),
       fetchJson(
         `https://api.github.com/repos/${KODI_UPSTREAM_REPOSITORY}/git/commits/${history.upstreamBase}`,
       ),
@@ -1585,16 +1627,28 @@ async function reviewedKodiHistoryMissing(component, policy) {
       ...history.developmentPullRequests.map((number) =>
         fetchJson(`https://api.github.com/repos/${policy.slug}/pulls/${number}`),
       ),
+      ...history.postCleanPullRequests.map((number) =>
+        fetchJson(`https://api.github.com/repos/${policy.slug}/pulls/${number}`),
+      ),
     ]);
+  const candidateGitCommit = initialProof[0];
+  const cleanAnchorGitCommit = initialProof[1];
+  const upstreamBaseGitCommit = initialProof[2];
+  const sourcePull = initialProof[3];
+  const finalPull = initialProof[4];
+  const developmentStart = 5;
+  const postCleanStart = developmentStart + history.developmentPullRequests.length;
+  const developmentPulls = initialProof.slice(developmentStart, postCleanStart);
+  const postCleanPulls = initialProof.slice(postCleanStart);
   if (
     !/^[0-9a-f]{40}$/.test(sourcePull?.head?.sha ?? "") ||
     !/^[0-9a-f]{40}$/.test(finalPull?.base?.sha ?? "") ||
-    !/^[0-9a-f]{40}$/.test(finalPull?.merge_commit_sha ?? "")
+    !/^[0-9a-f]{40}$/.test(finalPull?.merge_commit_sha ?? "") ||
+    postCleanPulls.some((pull) => !/^[0-9a-f]{40}$/.test(pull?.merge_commit_sha ?? ""))
   ) {
     return ["Kodi clean-history review chain"];
   }
-  const [sourceHeadGitCommit, finalBaseGitCommit, finalMergeGitCommit, ...developmentCompares] =
-    await Promise.all([
+  const secondaryProof = await Promise.all([
       fetchJson(`https://api.github.com/repos/${policy.slug}/git/commits/${sourcePull.head.sha}`),
       fetchJson(`https://api.github.com/repos/${policy.slug}/git/commits/${finalPull.base.sha}`),
       fetchJson(
@@ -1603,10 +1657,21 @@ async function reviewedKodiHistoryMissing(component, policy) {
       ...developmentPulls.map((pull) =>
         githubCompare(policy.slug, pull.merge_commit_sha, sourcePull.head.sha),
       ),
+      ...postCleanPulls.map((pull) =>
+        fetchJson(`https://api.github.com/repos/${policy.slug}/git/commits/${pull.merge_commit_sha}`),
+      ),
     ]);
+  const sourceHeadGitCommit = secondaryProof[0];
+  const finalBaseGitCommit = secondaryProof[1];
+  const finalMergeGitCommit = secondaryProof[2];
+  const compareStart = 3;
+  const postMergeStart = compareStart + developmentPulls.length;
+  const developmentCompares = secondaryProof.slice(compareStart, postMergeStart);
+  const postCleanMergeGitCommits = secondaryProof.slice(postMergeStart);
   return reviewedCleanHistoryMatchesCandidate(
     {
       candidateGitCommit,
+      cleanAnchorGitCommit,
       upstreamBaseGitCommit,
       sourcePull,
       sourceHeadGitCommit,
@@ -1615,6 +1680,8 @@ async function reviewedKodiHistoryMissing(component, policy) {
       finalMergeGitCommit,
       developmentPulls,
       developmentCompares,
+      postCleanPulls,
+      postCleanMergeGitCommits,
     },
     component,
     policy,

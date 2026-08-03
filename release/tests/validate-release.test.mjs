@@ -356,13 +356,21 @@ test("only ancestor or identical commits satisfy public reachability", () => {
   assert.equal(commitContainsAncestor(diverged, ancestor, descendant), false);
 });
 
-test("rewritten Kodi history requires the exact upstream base and reviewed tree chain", () => {
-  const component = { commit: "1".repeat(40) };
+test("rewritten Kodi history requires the exact clean anchor and protected PR chain", () => {
+  const history = COMPONENT_POLICIES.kodi.reviewedHistory;
+  const mergeShas = ["7", "8", "9", "a", "b", "c", "d", "e"].map((value) =>
+    value.repeat(40),
+  );
+  const headShas = ["f", "1", "2", "3", "4", "5", "6", "7"].map((value) =>
+    value.repeat(40),
+  );
+  const component = { commit: mergeShas.at(-1) };
   const candidateTree = "2".repeat(40);
   const sourceHead = "3".repeat(40);
   const sourceTree = "4".repeat(40);
   const finalBase = "5".repeat(40);
   const finalMerge = "6".repeat(40);
+  const finalHead = "a".repeat(40);
   const sourcePull = {
     number: 5,
     merged_at: null,
@@ -378,7 +386,7 @@ test("rewritten Kodi history requires the exact upstream base and reviewed tree 
       sha: finalBase,
       repo: { full_name: "ruizkinio/Jumpgate-kodi" },
     },
-    head: { repo: { full_name: "ruizkinio/Jumpgate-kodi" } },
+    head: { sha: finalHead, repo: { full_name: "ruizkinio/Jumpgate-kodi" } },
   };
   const developmentPulls = [2, 3, 4].map((number) => ({
     number,
@@ -387,24 +395,47 @@ test("rewritten Kodi history requires the exact upstream base and reviewed tree 
     base: { repo: { full_name: "ruizkinio/Jumpgate-kodi" } },
     head: { repo: { full_name: "ruizkinio/Jumpgate-kodi" } },
   }));
-  const proof = {
-    candidateGitCommit: {
-      sha: component.commit,
-      tree: { sha: candidateTree },
-      parents: [{ sha: COMPONENT_POLICIES.kodi.reviewedHistory.upstreamBase }],
+  const postCleanPulls = history.postCleanPullRequests.map((number, index) => ({
+    number,
+    merged_at: "2026-08-03T10:00:00Z",
+    merge_commit_sha: mergeShas[index],
+    base: {
+      ref: "master",
+      sha: index === 0 ? history.cleanAnchor : mergeShas[index - 1],
+      repo: { full_name: "ruizkinio/Jumpgate-kodi" },
     },
-    upstreamBaseGitCommit: { sha: COMPONENT_POLICIES.kodi.reviewedHistory.upstreamBase },
+    head: { sha: headShas[index], repo: { full_name: "ruizkinio/Jumpgate-kodi" } },
+  }));
+  const postCleanMergeGitCommits = postCleanPulls.map((pull) => ({
+    sha: pull.merge_commit_sha,
+    tree: { sha: candidateTree },
+    parents: [{ sha: pull.base.sha }, { sha: pull.head.sha }],
+  }));
+  const proof = {
+    candidateGitCommit: postCleanMergeGitCommits.at(-1),
+    cleanAnchorGitCommit: {
+      sha: history.cleanAnchor,
+      tree: { sha: finalMerge },
+      parents: [{ sha: history.upstreamBase }],
+    },
+    upstreamBaseGitCommit: { sha: history.upstreamBase },
     sourcePull,
     sourceHeadGitCommit: { sha: sourceHead, tree: { sha: sourceTree } },
     finalPull,
     finalBaseGitCommit: { sha: finalBase, tree: { sha: sourceTree } },
-    finalMergeGitCommit: { sha: finalMerge, tree: { sha: candidateTree } },
+    finalMergeGitCommit: {
+      sha: finalMerge,
+      tree: { sha: finalMerge },
+      parents: [{ sha: finalBase }, { sha: finalHead }],
+    },
     developmentPulls,
     developmentCompares: developmentPulls.map((pull) => ({
       status: "ahead",
       base_commit: { sha: pull.merge_commit_sha },
       merge_base_commit: { sha: pull.merge_commit_sha },
     })),
+    postCleanPulls,
+    postCleanMergeGitCommits,
   };
   assert.equal(
     reviewedCleanHistoryMatchesCandidate(proof, component, COMPONENT_POLICIES.kodi),
@@ -419,16 +450,16 @@ test("rewritten Kodi history requires the exact upstream base and reviewed tree 
   );
 
   const additionalParent = structuredClone(proof);
-  additionalParent.candidateGitCommit.parents.push({ sha: "7".repeat(40) });
+  additionalParent.cleanAnchorGitCommit.parents.push({ sha: "7".repeat(40) });
   assert.equal(
     reviewedCleanHistoryMatchesCandidate(additionalParent, component, COMPONENT_POLICIES.kodi),
     false,
   );
 
-  const changedCandidateTree = structuredClone(proof);
-  changedCandidateTree.candidateGitCommit.tree.sha = "8".repeat(40);
+  const changedCleanTree = structuredClone(proof);
+  changedCleanTree.cleanAnchorGitCommit.tree.sha = "8".repeat(40);
   assert.equal(
-    reviewedCleanHistoryMatchesCandidate(changedCandidateTree, component, COMPONENT_POLICIES.kodi),
+    reviewedCleanHistoryMatchesCandidate(changedCleanTree, component, COMPONENT_POLICIES.kodi),
     false,
   );
 
@@ -439,6 +470,38 @@ test("rewritten Kodi history requires the exact upstream base and reviewed tree 
     reviewedCleanHistoryMatchesCandidate(divergedDevelopment, component, COMPONENT_POLICIES.kodi),
     false,
   );
+
+  const skippedPull = structuredClone(proof);
+  skippedPull.postCleanPulls.splice(2, 1);
+  skippedPull.postCleanMergeGitCommits.splice(2, 1);
+  assert.equal(
+    reviewedCleanHistoryMatchesCandidate(skippedPull, component, COMPONENT_POLICIES.kodi),
+    false,
+  );
+
+  const wrongBase = structuredClone(proof);
+  wrongBase.postCleanPulls[3].base.sha = history.cleanAnchor;
+  assert.equal(
+    reviewedCleanHistoryMatchesCandidate(wrongBase, component, COMPONENT_POLICIES.kodi),
+    false,
+  );
+
+  const wrongMergeParent = structuredClone(proof);
+  wrongMergeParent.postCleanMergeGitCommits[4].parents[1].sha = "0".repeat(40);
+  assert.equal(
+    reviewedCleanHistoryMatchesCandidate(wrongMergeParent, component, COMPONENT_POLICIES.kodi),
+    false,
+  );
+
+  const earlierCandidate = { commit: mergeShas.at(-2) };
+  assert.equal(
+    reviewedCleanHistoryMatchesCandidate(proof, earlierCandidate, COMPONENT_POLICIES.kodi),
+    false,
+  );
+
+  assert.deepEqual(COMPONENT_POLICIES.bridge.requiredPullRequests, [
+    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
+  ]);
 });
 
 test("audited component executable closures are exact and reject byte or policy drift", async () => {
@@ -504,14 +567,14 @@ test("audited component executable closures are exact and reject byte or policy 
   assert.deepEqual(
     COMPONENT_POLICIES.bridge.auditedFiles.map(({ path, sha256 }) => ({ path, sha256 })),
     [
-      [".github/workflows/fly-deploy.yml", "1c2cc3f72ea000b489218e612319a87131c4d4f4b5e4faf2eeecf857dc2305ab"],
-      ["scripts/ci/fly-managed-rollout.js", "2e0af3926869a36c3d81f44bb59cb5cfda49a0d8bb03c8e96b8c780a2ff2bad0"],
+      [".github/workflows/fly-deploy.yml", "a4998b4064cf98c5bba6bd8cfeb782e53a66a77a2c126049701dd5e1870599eb"],
+      ["scripts/ci/fly-managed-rollout.js", "9cc954b815c012130e636f9fc2944873561efe7d1b3cf9f1bb7068f9cee7245f"],
       ["scripts/ci/deployment-attestation.js", "8bdd29ef1c9ae853bf90ed438f39d1083ea05526779e553971833ee00c87ffc0"],
       ["scripts/ci/http-smoke.js", "c1a658a8e17d4eed4041c71ac8834fe9ef254a59c9f075a81b10cdd83a223ff0"],
       ["package.json", "49fa6223dfd7424757af071f63b2862dacf39513d85117ddb4e482fc01898841"],
       ["package-lock.json", "f99690d0f821d8f399aa2c37ddc15722751712e109a3b44c3ba8a92cd3135a91"],
       [".npmrc", "89570b4333de5a4920e113d299e774c671b4e83ebfe34757ad27c3960a7bd269"],
-      ["fly.toml", "b594218d0650290789fbe97f64bd29da217c73c1c06a9e12002df9cbd12cfb23"],
+      ["fly.toml", "723cfbe7a912d2d2bd0b70f7e113d6e676349825a5a875d250a891a09dc05c99"],
     ].map(([path, sha256]) => ({ path, sha256 })),
   );
 });
