@@ -36,7 +36,7 @@ export const COMPONENT_POLICIES = Object.freeze({
       }),
       Object.freeze({
         path: "package.json",
-        sha256: "0afead6fde8d3ed72e8f98d49f2883ef10d3917cbf646ce7a8828c1cdbe05d51",
+        sha256: "9676fb8056525cc68504fb91565c857f81fa5a12f75548b8b8ba0be65534c2c7",
       }),
       Object.freeze({
         path: "package-lock.json",

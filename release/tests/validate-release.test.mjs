@@ -596,7 +596,7 @@ test("audited component executable closures are exact and reject byte or policy 
       ["scripts/ci/fly-managed-rollout.js", "9cc954b815c012130e636f9fc2944873561efe7d1b3cf9f1bb7068f9cee7245f"],
       ["scripts/ci/deployment-attestation.js", "8bdd29ef1c9ae853bf90ed438f39d1083ea05526779e553971833ee00c87ffc0"],
       ["scripts/ci/http-smoke.js", "c1a658a8e17d4eed4041c71ac8834fe9ef254a59c9f075a81b10cdd83a223ff0"],
-      ["package.json", "0afead6fde8d3ed72e8f98d49f2883ef10d3917cbf646ce7a8828c1cdbe05d51"],
+      ["package.json", "9676fb8056525cc68504fb91565c857f81fa5a12f75548b8b8ba0be65534c2c7"],
       ["package-lock.json", "00e73f23ee5363e2e753d81e28cba047bc8bce7ba5a360be00608b792dd18016"],
       [".npmrc", "89570b4333de5a4920e113d299e774c671b4e83ebfe34757ad27c3960a7bd269"],
       ["fly.toml", "723cfbe7a912d2d2bd0b70f7e113d6e676349825a5a875d250a891a09dc05c99"],
