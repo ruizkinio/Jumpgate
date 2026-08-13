@@ -1,4 +1,11 @@
 {
   "schemaVersion": 1,
-  "entries": []
+  "entries": [
+    {
+      "repository": "ruizkinio/Jumpgate-kodi",
+      "fingerprint": "98a95ef65790698480878c02ed9a9f8ef262d598083d905749310cdde19faa1f",
+      "reason": "Reviewed false positive in ordinary external-player Back coordinator control flow; no credential or secret material is present.",
+      "expiresAt": "2026-09-13T00:00:00Z"
+    }
+  ]
 }
