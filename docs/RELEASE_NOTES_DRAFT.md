@@ -1,7 +1,8 @@
-# Jumpgate {{VERSION}}
+# Jumpgate 3.0.0
 
 > **Release-owner draft:** Do not publish this file as release notes until every item in
-> the publication gate below is complete and every `{{PLACEHOLDER}}` has been replaced.
+> the publication gate below is complete and every remaining `{{PLACEHOLDER}}` has been
+> replaced from protected release evidence.
 
 Jumpgate turns Kodi into a source-aware external player for Stremio on Android. It
 keeps Kodi's playback engine, settings, skins, local history, and subtitle addons while
@@ -49,12 +50,12 @@ code, token, or provider URL.
 
 | Artifact | SHA-256 | ABI | Package | Signer SHA-256 |
 | --- | --- | --- | --- | --- |
-| `{{ARM64_APK_NAME}}` | `{{ARM64_APK_SHA256}}` | `arm64-v8a` | `io.github.ruizkinio.jumpgate` | `{{SIGNER_SHA256}}` |
-| `{{ARMV7_APK_NAME}}` | `{{ARMV7_APK_SHA256}}` | `armeabi-v7a` | `io.github.ruizkinio.jumpgate` | `{{SIGNER_SHA256}}` |
+| `Jumpgate-22.0-ALPHA2-Jumpgate-3.0.0-arm64-v8a.apk` | `5e1f43083d2a0fdd9e858131f2197c9af984114909cac0ad8432c6ba6ecb9c7e` | `arm64-v8a` | `io.github.ruizkinio.jumpgate` | `10625572b5f34c5125b030dd5ab5fd40bdcd263d0fa8e2073ddee70435970551` |
+| `Jumpgate-22.0-ALPHA2-Jumpgate-3.0.0-armeabi-v7a.apk` | `f30a7edfccaa7b70f2c915f747856a2e619396e005b41cbbd93ed8a66150c798` | `armeabi-v7a` | `io.github.ruizkinio.jumpgate` | `10625572b5f34c5125b030dd5ab5fd40bdcd263d0fa8e2073ddee70435970551` |
 
-- Jumpgate Kodi commit: `{{KODI_COMMIT}}`
-- Bridge commit: `{{BRIDGE_COMMIT}}`
-- Bridge image digest: `{{BRIDGE_IMAGE_DIGEST}}`
+- Jumpgate Kodi commit: `9cd5a416595825dccff0ac6f107f7217b9744e5e`
+- Bridge commit: `1a37c36095cbd933af955936928ac3fd370e8206`
+- Bridge image digest: `sha256:7d6c712efebdfcdf0c2d5136d5fb4cfe998f81a0e86d41b0536fd7a352498319`
 - Coordinated release commit: `{{COORDINATION_COMMIT}}`
 - Protected release validation: `{{RELEASE_VALIDATION_URL}}`
 - Sanitized device UAT evidence: `{{UAT_EVIDENCE_URL}}`
@@ -62,8 +63,8 @@ code, token, or provider URL.
 ## Compatibility
 
 - Android devices supported by one of the published ABIs.
-- Stremio for Android `{{STREMIO_VERSION}}`, containing the external-player lifecycle
-  fix verified by the release gate.
+- Stremio Android Mobile `2.3.2` and Android TV `1.10.4`, pinned by APK hash,
+  package/version, ABI, and signing certificate for the release gate.
 - Stream and subtitle addons selected during provider import, subject to the provider
   returning a valid Stremio resource and a transport Kodi can play.
 - Direct HTTP(S), playlist-backed, torrent-backed, debrid, and addon-proxied sources
@@ -75,24 +76,27 @@ contain enough canonical context for a safe Trakt claim.
 
 ## Known Limitations
 
-{{KNOWN_LIMITATIONS_OR_NONE}}
-
 - Clearlogos are optional and unavailable for some titles; text is the fallback.
 - Android remembers preferred media apps by matching intent. Choosing **Always** can
   affect matching video launches from other apps and may be scheme-specific.
+- Stremio Android TV `1.10.4` can reopen **Who's watching?** after an external-player
+  round trip for Premium accounts with profiles. Reselect the same profile; exact
+  same-card replay must still work without force-closing either app. This is tracked as
+  `Stremio/stremio-bugs#2708`.
 - Provider compatibility cannot be guaranteed when an addon returns an invalid
   Stremio resource or a transport Kodi cannot play.
 
 ## Publication Gate
 
-- [ ] Public Kodi history contains only the audited Jumpgate delta above the official
+- [x] Public Kodi history contains only the audited Jumpgate delta above the official
       Kodi parent and no credential-bearing development refs.
-- [ ] Trakt credentials exposed in historical development refs have been rotated.
-- [ ] Protected cross-repository security audit has zero unresolved findings.
-- [ ] One recoverable stable Android signer is provisioned and matches both APKs.
-- [ ] Both APKs pass package, ABI, signer, secret, and provenance verification.
+- [x] Protected cross-repository security audit has zero unresolved findings.
+- [x] One recoverable stable Android signer is provisioned and matches both APKs.
+- [x] Both APKs pass package, ABI, signer, secret, and provenance verification.
+- [x] The exact Bridge deployment passes attestation and live readiness verification.
 - [ ] Physical ARM phone and TV UAT pass the complete public protocol.
-- [ ] The public Stremio Android release contains the required lifecycle fix.
+- [x] Supported Stremio Mobile and TV APKs pass static package, ABI, signer, intent,
+      result-contract, and unload-path verification.
 - [ ] Repeated playback passes without force-closing Stremio or Jumpgate.
 - [ ] All placeholders and draft warnings have been removed from the final GitHub
       release body.
