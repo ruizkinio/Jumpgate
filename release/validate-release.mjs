@@ -264,6 +264,29 @@ export const REQUIRED_UAT_CASES = Object.freeze([
   "profiles/repair-history-boundary",
 ]);
 
+const TV_ONLY_UAT_CASES = Object.freeze([
+  "lifecycle/stremio-tv-premium-profile-return",
+  "lifecycle/stremio-tv-premium-profile-picker-boundary",
+]);
+
+const tvOnlyUatCaseSet = new Set(TV_ONLY_UAT_CASES);
+for (const id of TV_ONLY_UAT_CASES) {
+  if (!REQUIRED_UAT_CASES.includes(id)) {
+    throw new Error(`TV-only UAT case is missing from the canonical protocol: ${id}`);
+  }
+}
+
+export const REQUIRED_UAT_CASES_BY_DEVICE = Object.freeze({
+  phone: Object.freeze(REQUIRED_UAT_CASES.filter((id) => !tvOnlyUatCaseSet.has(id))),
+  tv: REQUIRED_UAT_CASES,
+});
+
+export function requiredUatCasesForDevice(deviceClass) {
+  if (deviceClass === "phone") return REQUIRED_UAT_CASES_BY_DEVICE.phone;
+  if (deviceClass === "tv") return REQUIRED_UAT_CASES_BY_DEVICE.tv;
+  fail("deviceClass must be phone or tv");
+}
+
 export const SECURITY_SCOPES = Object.freeze({
   "ruizkinio/Jumpgate": "all-public-history",
   "ruizkinio/Jumpgate-bridge": "all-public-branches-and-tags",
@@ -628,8 +651,8 @@ export function validateEvidence(
   releaseSignerPolicy = KODI_RELEASE_POLICY.signer,
 ) {
   assertExactKeys(evidence, ["schemaVersion", "candidate", "runs"], "evidence");
-  if (evidence.schemaVersion !== 2) {
-    fail("evidence.schemaVersion must be 2");
+  if (evidence.schemaVersion !== 3) {
+    fail("evidence.schemaVersion must be 3");
   }
 
   assertExactKeys(
@@ -746,8 +769,9 @@ export function validateEvidence(
     ) {
       fail(`${path} must use the exact locked Stremio ${stremioAppName} ${run.abi} APK`);
     }
-    if (run.caseCount !== REQUIRED_UAT_CASES.length) {
-      fail(`${path}.caseCount must cover every required UAT case`);
+    const requiredCases = requiredUatCasesForDevice(run.deviceClass);
+    if (run.caseCount !== requiredCases.length) {
+      fail(`${path}.caseCount must cover every UAT case required for ${run.deviceClass}`);
     }
     assertHash(run.evidenceSha256, `${path}.evidenceSha256`);
     parseEvidenceBlobUrl(run.evidenceUrl, `${path}.evidenceUrl`);
@@ -766,7 +790,7 @@ export function validateUatReport(report, run, candidate) {
     ["schemaVersion", "candidate", "device", "testedAt", "bridge", "cases"],
     "UAT report",
   );
-  if (report.schemaVersion !== 2) fail("UAT report schemaVersion must be 2");
+  if (report.schemaVersion !== 3) fail("UAT report schemaVersion must be 3");
   assertExactValue(report.candidate, {
     coordinatedVersion: candidate.coordinatedVersion,
     bridgeCommit: candidate.components.bridge.commit,
@@ -794,8 +818,9 @@ export function validateUatReport(report, run, candidate) {
     buildSha: candidate.components.bridge.commit,
     imageDigest: candidate.components.bridge.imageDigest,
   }, "UAT report.bridge");
-  if (!Array.isArray(report.cases) || report.cases.length !== REQUIRED_UAT_CASES.length) {
-    fail("UAT report must contain every required case exactly once");
+  const requiredCases = requiredUatCasesForDevice(run.deviceClass);
+  if (!Array.isArray(report.cases) || report.cases.length !== requiredCases.length) {
+    fail(`UAT report must contain every case required for ${run.deviceClass} exactly once`);
   }
   const actualIds = [];
   for (const [index, result] of report.cases.entries()) {
@@ -815,9 +840,9 @@ export function validateUatReport(report, run, candidate) {
   }
   if (
     new Set(actualIds).size !== actualIds.length ||
-    [...actualIds].sort().join("\n") !== [...REQUIRED_UAT_CASES].sort().join("\n")
+    [...actualIds].sort().join("\n") !== [...requiredCases].sort().join("\n")
   ) {
-    fail("UAT report must contain every required case exactly once");
+    fail(`UAT report must contain every case required for ${run.deviceClass} exactly once`);
   }
   return report;
 }

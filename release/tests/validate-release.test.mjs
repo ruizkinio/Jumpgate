@@ -10,6 +10,7 @@ import {
   KODI_RELEASE_POLICY,
   PHYSICAL_EVIDENCE_MAX_AGE_MS,
   REQUIRED_UAT_CASES,
+  REQUIRED_UAT_CASES_BY_DEVICE,
   STREMIO_RELEASE_POLICY,
   commitContainsAncestor,
   extractZipEntry,
@@ -22,6 +23,7 @@ import {
   publicRefManifestSha256,
   readinessBlockers,
   reviewedCleanHistoryMatchesCandidate,
+  requiredUatCasesForDevice,
   securityFindingFingerprint,
   stremioCandidateSha256,
   validateApkNativeAbi,
@@ -83,11 +85,11 @@ function physicalEvidence() {
       evidenceSha256: marker.repeat(64),
       evidenceUrl:
         `https://github.com/ruizkinio/Jumpgate/blob/${marker.repeat(40)}/release/evidence/${deviceClass}.json`,
-      caseCount: REQUIRED_UAT_CASES.length,
+      caseCount: requiredUatCasesForDevice(deviceClass).length,
     };
   };
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     candidate: {
       coordinatedVersion: locked.coordinatedVersion,
       bridgeCommit: locked.components.bridge.commit,
@@ -104,7 +106,7 @@ function physicalEvidence() {
 
 function uatReport(run, locked = candidate()) {
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     candidate: {
       coordinatedVersion: locked.coordinatedVersion,
       bridgeCommit: locked.components.bridge.commit,
@@ -132,7 +134,7 @@ function uatReport(run, locked = candidate()) {
       buildSha: locked.components.bridge.commit,
       imageDigest: locked.components.bridge.imageDigest,
     },
-    cases: REQUIRED_UAT_CASES.map((id) => ({
+    cases: requiredUatCasesForDevice(run.deviceClass).map((id) => ({
       id,
       status: "pass",
       observation: `Observed the expected bounded result for ${id}.`,
@@ -709,6 +711,20 @@ test("physical evidence requires fresh distinct devices and locked ABI artifacts
     () => validateEvidence(wrongStremio, candidate(), TEST_NOW, TEST_RELEASE_SIGNER_POLICY),
     /exact locked Stremio mobile arm64-v8a APK/,
   );
+
+  const oldSchema = physicalEvidence();
+  oldSchema.schemaVersion = 2;
+  assert.throws(
+    () => validateEvidence(oldSchema, candidate(), TEST_NOW, TEST_RELEASE_SIGNER_POLICY),
+    /schemaVersion must be 3/,
+  );
+
+  const allCasesClaimedOnPhone = physicalEvidence();
+  allCasesClaimedOnPhone.runs[0].caseCount = REQUIRED_UAT_CASES.length;
+  assert.throws(
+    () => validateEvidence(allCasesClaimedOnPhone, candidate(), TEST_NOW, TEST_RELEASE_SIGNER_POLICY),
+    /required for phone/,
+  );
 });
 
 test("the public UAT protocol documents every stable evidence case exactly once", () => {
@@ -718,9 +734,28 @@ test("the public UAT protocol documents every stable evidence case exactly once"
   );
   assert.deepEqual(documented, REQUIRED_UAT_CASES);
   assert.equal(new Set(documented).size, documented.length);
+  const documentedTvOnly = [
+    ...protocol.matchAll(/\*\*TV only\.\*\* \[`([a-z0-9-]+\/[a-z0-9-]+)`\]/g),
+  ].map((match) => match[1]);
+  const combinedDeviceCases = new Set([
+    ...REQUIRED_UAT_CASES_BY_DEVICE.phone,
+    ...REQUIRED_UAT_CASES_BY_DEVICE.tv,
+  ]);
+  assert.deepEqual([...combinedDeviceCases].sort(), [...REQUIRED_UAT_CASES].sort());
+  const policyTvOnly = REQUIRED_UAT_CASES_BY_DEVICE.tv.filter(
+    (id) => !REQUIRED_UAT_CASES_BY_DEVICE.phone.includes(id),
+  );
+  assert.deepEqual(documentedTvOnly, policyTvOnly);
+  assert.deepEqual(policyTvOnly, [
+    "lifecycle/stremio-tv-premium-profile-return",
+    "lifecycle/stremio-tv-premium-profile-picker-boundary",
+  ]);
+  for (const invalidClass of ["tablet", "toString", "__proto__", null]) {
+    assert.throws(() => requiredUatCasesForDevice(invalidClass), /phone or tv/);
+  }
 });
 
-test("UAT reports require an observed pass for every protocol case", () => {
+test("UAT reports require an observed pass for every device-scoped protocol case", () => {
   const evidence = physicalEvidence();
   const report = uatReport(evidence.runs[0]);
   assert.equal(validateUatReport(report, evidence.runs[0], candidate()), report);
@@ -731,7 +766,22 @@ test("UAT reports require an observed pass for every protocol case", () => {
 
   const unrelated = structuredClone(report);
   unrelated.cases.pop();
-  assert.throws(() => validateUatReport(unrelated, evidence.runs[0], candidate()), /every required case/);
+  assert.throws(() => validateUatReport(unrelated, evidence.runs[0], candidate()), /required for phone/);
+
+  const tvOnly = structuredClone(report);
+  tvOnly.cases.push({
+    id: "lifecycle/stremio-tv-premium-profile-return",
+    status: "pass",
+    observation: "Observed TV-only behavior on a phone.",
+  });
+  assert.throws(() => validateUatReport(tvOnly, evidence.runs[0], candidate()), /required for phone/);
+
+  const oldSchema = structuredClone(report);
+  oldSchema.schemaVersion = 2;
+  assert.throws(
+    () => validateUatReport(oldSchema, evidence.runs[0], candidate()),
+    /schemaVersion must be 3/,
+  );
 
   const control = structuredClone(report);
   control.cases[0].observation = "forged\nline";

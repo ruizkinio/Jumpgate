@@ -19,6 +19,11 @@ tokens, headers, cookies, provider responses, account names, or pairing codes.
 - Stremio is signed into a dedicated test account on the target device.
 - Trakt and TMDB test accounts/keys contain no unrelated private history.
 
+Every bracketed case below is required on both physical device classes unless it is
+explicitly labeled **TV only**. TV-only cases are omitted from the phone workbook and
+must pass in the TV workbook; there is no operator-selected `N/A` status or applicability
+override. The strict phone/TV case-set union must cover this complete protocol.
+
 ## Installation And Pairing
 
 1. [`installation-and-pairing/install-verified-apk`] Install the verified APK without
@@ -164,7 +169,7 @@ For canonical and local-only playback:
 5. [`lifecycle/seek`] Seek backward and forward.
 6. [`lifecycle/back-result`] Dismiss the OSD with Back, then return to Stremio with the
    next Back.
-7. [`lifecycle/stremio-tv-premium-profile-return`] On Android TV `1.10.4` with a Premium
+7. **TV only.** [`lifecycle/stremio-tv-premium-profile-return`] On Android TV `1.10.4` with a Premium
    multi-profile account, record whether Stremio shows **Who's watching?** after the
    return. If it does, select the same profile without restarting either app. This is
    tracked upstream as `Stremio/stremio-bugs#2708` and does not waive any result, task,
@@ -190,7 +195,7 @@ Pass conditions:
   process restart.
 - [`lifecycle/standalone-after-external`] Standalone mode remains unaffected after
   external-player use.
-- [`lifecycle/stremio-tv-premium-profile-picker-boundary`] The Android TV `1.10.4`
+- **TV only.** [`lifecycle/stremio-tv-premium-profile-picker-boundary`] The Android TV `1.10.4`
   Premium profile picker is accepted only when the pinned Stremio APK and same process
   are proven, Jumpgate's exact terminal result and local history are durable, its
   external task exits, and same-card replay passes after reselecting the profile. It

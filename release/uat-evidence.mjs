@@ -6,15 +6,15 @@ import { parseArgs } from "node:util";
 
 import {
   KODI_RELEASE_POLICY,
-  REQUIRED_UAT_CASES,
   parseEvidenceBlobUrl,
+  requiredUatCasesForDevice,
   stremioCandidateSha256,
   validateCandidate,
   validateEvidence,
   validateUatReport,
 } from "./validate-release.mjs";
 
-const WORKBOOK_SCHEMA_VERSION = 1;
+const WORKBOOK_SCHEMA_VERSION = 2;
 const UTF8_DECODER = new TextDecoder("utf-8", { fatal: true });
 const OBSERVATION_REJECTIONS = [
   [/(?:https?|stremio):\/\//i, "URLs"],
@@ -108,13 +108,18 @@ export function assertSanitizedObservation(observation) {
 
 export function createWorkbook(candidate, input, now = new Date()) {
   validateCandidate(candidate);
+  const device = validateDeviceInput(input, candidate);
   return {
     schemaVersion: WORKBOOK_SCHEMA_VERSION,
     candidate: candidateRecord(candidate),
-    device: validateDeviceInput(input, candidate),
+    device,
     bridge: bridgeRecord(candidate),
     createdAt: now.toISOString(),
-    cases: REQUIRED_UAT_CASES.map((id) => ({ id, status: "pending", observation: "" })),
+    cases: requiredUatCasesForDevice(device.deviceClass).map((id) => ({
+      id,
+      status: "pending",
+      observation: "",
+    })),
   };
 }
 
@@ -128,12 +133,13 @@ export function validateWorkbook(workbook, candidate) {
   assertExactKeys(workbook.device, Object.keys(expectedDevice), "workbook device");
   assertSame(workbook.device, expectedDevice, "workbook device");
   if (Number.isNaN(new Date(workbook.createdAt).valueOf())) fail("workbook createdAt is invalid");
-  if (!Array.isArray(workbook.cases) || workbook.cases.length !== REQUIRED_UAT_CASES.length) {
-    fail("workbook must contain every required UAT case");
+  const requiredCases = requiredUatCasesForDevice(workbook.device.deviceClass);
+  if (!Array.isArray(workbook.cases) || workbook.cases.length !== requiredCases.length) {
+    fail(`workbook must contain every UAT case required for ${workbook.device.deviceClass}`);
   }
   for (const [index, entry] of workbook.cases.entries()) {
     assertExactKeys(entry, ["id", "status", "observation"], `workbook case ${index}`);
-    if (entry.id !== REQUIRED_UAT_CASES[index]) fail("workbook cases must remain in policy order");
+    if (entry.id !== requiredCases[index]) fail("workbook cases must remain in device policy order");
     if (!new Set(["pending", "pass"]).has(entry.status)) fail(`${entry.id} has an invalid status`);
     if (entry.status === "pending" && entry.observation !== "") fail(`${entry.id} pending observation must be empty`);
     if (entry.status === "pass") assertSanitizedObservation(entry.observation);
@@ -144,8 +150,9 @@ export function validateWorkbook(workbook, candidate) {
 export function recordPass(workbook, candidate, caseId, observation) {
   validateWorkbook(workbook, candidate);
   assertSanitizedObservation(observation);
-  const index = REQUIRED_UAT_CASES.indexOf(caseId);
-  if (index < 0) fail(`unknown UAT case: ${caseId}`);
+  const requiredCases = requiredUatCasesForDevice(workbook.device.deviceClass);
+  const index = requiredCases.indexOf(caseId);
+  if (index < 0) fail(`UAT case is not required for ${workbook.device.deviceClass}: ${caseId}`);
   const updated = structuredClone(workbook);
   updated.cases[index] = { id: caseId, status: "pass", observation };
   return validateWorkbook(updated, candidate);
@@ -156,7 +163,7 @@ export function finalizeWorkbook(workbook, candidate, now = new Date()) {
   const pending = workbook.cases.filter((entry) => entry.status !== "pass");
   if (pending.length > 0) fail(`cannot finalize: ${pending.length} UAT cases remain pending`);
   const report = {
-    schemaVersion: 2,
+    schemaVersion: 3,
     candidate: workbook.candidate,
     device: workbook.device,
     testedAt: now.toISOString().replace(/\.\d{3}Z$/, "Z"),
@@ -193,7 +200,7 @@ export function createEvidenceIndex(candidate, reports, now = new Date()) {
     validateUatReport(report, run, candidate);
     return run;
   });
-  const index = { schemaVersion: 2, candidate: candidateRecord(candidate), runs };
+  const index = { schemaVersion: 3, candidate: candidateRecord(candidate), runs };
   validateEvidence(index, candidate, now);
   return index;
 }
