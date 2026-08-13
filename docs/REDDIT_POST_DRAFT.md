@@ -7,11 +7,11 @@
 
 ## Recommended Title
 
-I turned Kodi into a source-aware external player for Stremio: Jumpgate {{VERSION}}
+I turned Kodi into a source-aware external player for Stremio: Jumpgate 3.0.0
 
 ## Alternate Titles
 
-- Jumpgate {{VERSION}}: keep Kodi as your player while choosing streams in Stremio
+- Jumpgate 3.0.0: keep Kodi as your player while choosing streams in Stremio
 - I built a Kodi-based external player for Stremio that does not guess Trakt identity
 
 ## Post
@@ -45,12 +45,17 @@ artwork, hash, or previous playback.
 
 Install guide, verified APKs, hashes, source, known limitations, and UAT evidence:
 
-{{GITHUB_RELEASE_URL}}
+{{COORDINATED_RELEASE_URL}}
 
 This is not affiliated with Kodi, Stremio, Trakt, TMDB, or any stream/addon provider.
 Jumpgate does not provide media or bundle a catalog, debrid service, or stream source.
 Provider compatibility still depends on the addon returning a valid Stremio resource
 and a transport Kodi can play.
+
+For this release, use Stremio Android Mobile `2.3.2` or Android TV `1.10.4`. On Android
+TV, Premium accounts with profiles can return to **Who's watching?** after external
+playback because of an upstream Stremio issue. Reselecting the same profile must allow
+the same stream to launch again without force-closing either app.
 
 Please do not paste configured addon URLs, install links, pairing codes, provider URLs,
 tokens, or raw logs into Reddit or GitHub issues. Those can be private capabilities even
