@@ -563,7 +563,7 @@ test("audited component executable closures are exact and reject byte or policy 
         const path = new URL(url).pathname.split(`/${component.commit}/`)[1];
         return path === changedPath ? Buffer.from("changed\n") : audited.get(path);
       }),
-      /do not match policy/,
+      new RegExp(`do not match policy: ${changedPath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`),
       changedPath,
     );
   }

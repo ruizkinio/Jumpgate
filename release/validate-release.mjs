@@ -74,7 +74,7 @@ export const COMPONENT_POLICIES = Object.freeze({
       }),
       Object.freeze({
         path: ".github/workflows/jumpgate-release-reconcile.yml",
-        sha256: "f84e9eac0662096705cdc907e2079f7a454fc4c39eacdf22d3dd3bd10eeca014",
+        sha256: "fbaeb4a5e0d1dd8b65d7ea26a3867567c9c3893c24788af3ca18dbf0b9fbd6e2",
       }),
       Object.freeze({
         path: "tools/ci/jumpgate/test-android-branding.py",
@@ -1381,7 +1381,7 @@ export async function verifyComponentAuditedFiles(
     const bytes = Buffer.from(await loadBytes(url));
     const actual = createHash("sha256").update(bytes).digest("hex");
     if (actual !== descriptor.sha256) {
-      fail(`${name} audited bytes at the candidate commit do not match policy`);
+      fail(`${name} audited bytes at the candidate commit do not match policy: ${descriptor.path}`);
     }
     verified[descriptor.path] = actual;
   }
