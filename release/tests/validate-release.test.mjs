@@ -41,7 +41,9 @@ import {
   verifyGithubDeploymentAttestation,
   verifyCurrentPublicRefManifest,
   verifyLiveBridgeState,
+  verifyEvidenceArtifacts,
 } from "../validate-release.mjs";
+import { evidencePng } from "./png-fixture.mjs";
 
 const CANDIDATE_TEMPLATE = JSON.parse(
   readFileSync(new URL("../candidate.json", import.meta.url), "utf8"),
@@ -86,6 +88,7 @@ function physicalEvidence() {
       evidenceUrl:
         `https://github.com/ruizkinio/Jumpgate/blob/${marker.repeat(40)}/release/evidence/${deviceClass}.json`,
       caseCount: requiredUatCasesForDevice(deviceClass).length,
+      vobsubCaptureSha256: [1, 2, 3].map((cue) => `${deviceClass === "phone" ? cue : cue + 3}`.repeat(64)),
     };
   };
   return {
@@ -105,8 +108,9 @@ function physicalEvidence() {
 }
 
 function uatReport(run, locked = candidate()) {
+  const captureHashes = run.vobsubCaptureSha256;
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     candidate: {
       coordinatedVersion: locked.coordinatedVersion,
       bridgeCommit: locked.components.bridge.commit,
@@ -134,6 +138,11 @@ function uatReport(run, locked = candidate()) {
       buildSha: locked.components.bridge.commit,
       imageDigest: locked.components.bridge.imageDigest,
     },
+    vobsubRenderEvidence: [
+      { cue: 1, text: "JUMPGATE VOBSUB 1", windowStartMs: 2_000, windowEndMs: 5_000, status: "pass", sha256: captureHashes[0], capturePath: `release/evidence/${run.deviceClass}-vobsub-cue-1.png`, visualReview: "cue-and-time-rail-confirmed", privacyReview: "sanitized-for-publication" },
+      { cue: 2, text: "JUMPGATE VOBSUB 2", windowStartMs: 7_000, windowEndMs: 10_000, status: "pass", sha256: captureHashes[1], capturePath: `release/evidence/${run.deviceClass}-vobsub-cue-2.png`, visualReview: "cue-and-time-rail-confirmed", privacyReview: "sanitized-for-publication" },
+      { cue: 3, text: "JUMPGATE VOBSUB 3", windowStartMs: 12_000, windowEndMs: 15_000, status: "pass", sha256: captureHashes[2], capturePath: `release/evidence/${run.deviceClass}-vobsub-cue-3.png`, visualReview: "cue-and-time-rail-confirmed", privacyReview: "sanitized-for-publication" },
+    ],
     cases: requiredUatCasesForDevice(run.deviceClass).map((id) => ({
       id,
       status: "pass",
@@ -691,11 +700,12 @@ test("physical evidence requires fresh distinct devices and locked ABI artifacts
   );
 
   const shared = physicalEvidence();
-  shared.runs[1].evidenceUrl = shared.runs[0].evidenceUrl;
+  shared.runs[1].manufacturer = shared.runs[0].manufacturer;
+  shared.runs[1].model = shared.runs[0].model;
   shared.runs[1].evidenceSha256 = shared.runs[0].evidenceSha256;
   assert.throws(
     () => validateEvidence(shared, candidate(), TEST_NOW, TEST_RELEASE_SIGNER_POLICY),
-    /distinct immutable/,
+    /different physical devices/,
   );
 
   const wrongSigner = physicalEvidence();
@@ -777,10 +787,31 @@ test("UAT reports require an observed pass for every device-scoped protocol case
   assert.throws(() => validateUatReport(tvOnly, evidence.runs[0], candidate()), /required for phone/);
 
   const oldSchema = structuredClone(report);
-  oldSchema.schemaVersion = 2;
+  oldSchema.schemaVersion = 3;
   assert.throws(
     () => validateUatReport(oldSchema, evidence.runs[0], candidate()),
-    /schemaVersion must be 3/,
+    /schemaVersion must be 4/,
+  );
+
+  const reusedCapture = physicalEvidence();
+  reusedCapture.runs[1].vobsubCaptureSha256[0] = reusedCapture.runs[0].vobsubCaptureSha256[0];
+  assert.throws(
+    () => validateEvidence(reusedCapture, candidate(), TEST_NOW, TEST_RELEASE_SIGNER_POLICY),
+    /six distinct VobSub/,
+  );
+
+  const missingCapture = structuredClone(report);
+  missingCapture.vobsubRenderEvidence.pop();
+  assert.throws(
+    () => validateUatReport(missingCapture, evidence.runs[0], candidate()),
+    /exactly three VobSub render captures/,
+  );
+
+  const wrongCue = structuredClone(report);
+  wrongCue.vobsubRenderEvidence[1].text = "Wrong cue";
+  assert.throws(
+    () => validateUatReport(wrongCue, evidence.runs[0], candidate()),
+    /must be "JUMPGATE VOBSUB 2"/,
   );
 
   const control = structuredClone(report);
@@ -804,6 +835,39 @@ test("evidence URLs must be immutable public blobs without ambient data", () => 
       ),
     /without query or fragment/,
   );
+});
+
+test("immutable VobSub capture verification enforces exact paths, bytes, and PNG structure", async () => {
+  const locked = candidate();
+  const evidence = physicalEvidence();
+  const reports = new Map();
+  for (const run of evidence.runs) {
+    const report = uatReport(run, locked);
+    for (const capture of report.vobsubRenderEvidence) {
+      const bytes = evidencePng(capture.cue + (run.deviceClass === "tv" ? 10 : 0));
+      capture.sha256 = createHash("sha256").update(bytes).digest("hex");
+      reports.set(capture.capturePath, bytes);
+    }
+    run.vobsubCaptureSha256 = report.vobsubRenderEvidence.map((capture) => capture.sha256);
+    const reportBytes = Buffer.from(`${JSON.stringify(report)}\n`);
+    run.evidenceSha256 = createHash("sha256").update(reportBytes).digest("hex");
+    reports.set(`release/evidence/${run.deviceClass}.json`, reportBytes);
+  }
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    const path = new URL(url).pathname.split("/").slice(4).join("/");
+    const bytes = reports.get(path);
+    return bytes
+      ? new Response(bytes, { status: 200, headers: { "content-length": String(bytes.length) } })
+      : new Response("missing", { status: 404 });
+  };
+  try {
+    await verifyEvidenceArtifacts(evidence, locked);
+    reports.set("release/evidence/phone-vobsub-cue-2.png", Buffer.from("not png"));
+    await assert.rejects(() => verifyEvidenceArtifacts(evidence, locked), /digest does not match|complete PNG/);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test("security audit evidence is scoped, zero-finding, and reproducible", () => {

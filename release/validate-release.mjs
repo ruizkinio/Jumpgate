@@ -8,6 +8,8 @@ import { dirname, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { inflateRawSync } from "node:zlib";
 
+import { validatePublicEvidencePng } from "./png-evidence.mjs";
+
 export const COMPONENT_POLICIES = Object.freeze({
   bridge: Object.freeze({
     repository: "https://github.com/ruizkinio/Jumpgate-bridge.git",
@@ -409,6 +411,14 @@ export function parseEvidenceBlobUrl(value, path = "evidenceUrl") {
   return { repository: match[1], commit: match[2], filePath: match[3] };
 }
 
+function parseCanonicalUatReportUrl(value, deviceClass, path = "evidenceUrl") {
+  const blob = parseEvidenceBlobUrl(value, path);
+  if (blob.repository !== "Jumpgate" || blob.filePath !== `release/evidence/${deviceClass}.json`) {
+    fail(`${path} must be the canonical immutable Jumpgate ${deviceClass} UAT report URL`);
+  }
+  return blob;
+}
+
 function validateComponentIdentity(component, policy, path) {
   if (component.repository !== policy.repository || component.branch !== policy.branch) {
     fail(`${path} must use ${policy.repository}#${policy.branch}`);
@@ -685,6 +695,7 @@ export function validateEvidence(
   const seenClasses = new Set();
   const seenDevices = new Set();
   const seenReports = new Set();
+  const seenCaptureHashes = new Set();
   for (const [index, run] of evidence.runs.entries()) {
     const path = `evidence.runs[${index}]`;
     assertExactKeys(
@@ -706,6 +717,7 @@ export function validateEvidence(
         "evidenceSha256",
         "evidenceUrl",
         "caseCount",
+        "vobsubCaptureSha256",
       ],
       path,
     );
@@ -773,8 +785,16 @@ export function validateEvidence(
     if (run.caseCount !== requiredCases.length) {
       fail(`${path}.caseCount must cover every UAT case required for ${run.deviceClass}`);
     }
+    if (!Array.isArray(run.vobsubCaptureSha256) || run.vobsubCaptureSha256.length !== 3) {
+      fail(`${path}.vobsubCaptureSha256 must contain exactly three capture hashes`);
+    }
+    for (const [captureIndex, hash] of run.vobsubCaptureSha256.entries()) {
+      assertHash(hash, `${path}.vobsubCaptureSha256[${captureIndex}]`);
+      if (seenCaptureHashes.has(hash)) fail("phone and TV must use six distinct VobSub render captures");
+      seenCaptureHashes.add(hash);
+    }
     assertHash(run.evidenceSha256, `${path}.evidenceSha256`);
-    parseEvidenceBlobUrl(run.evidenceUrl, `${path}.evidenceUrl`);
+    parseCanonicalUatReportUrl(run.evidenceUrl, run.deviceClass, `${path}.evidenceUrl`);
     const reportKey = `${run.evidenceUrl}\n${run.evidenceSha256}`;
     if (seenReports.has(reportKey)) {
       fail("phone and TV must use distinct immutable evidence reports");
@@ -787,10 +807,10 @@ export function validateEvidence(
 export function validateUatReport(report, run, candidate) {
   assertExactKeys(
     report,
-    ["schemaVersion", "candidate", "device", "testedAt", "bridge", "cases"],
+    ["schemaVersion", "candidate", "device", "testedAt", "bridge", "vobsubRenderEvidence", "cases"],
     "UAT report",
   );
-  if (report.schemaVersion !== 3) fail("UAT report schemaVersion must be 3");
+  if (report.schemaVersion !== 4) fail("UAT report schemaVersion must be 4");
   assertExactValue(report.candidate, {
     coordinatedVersion: candidate.coordinatedVersion,
     bridgeCommit: candidate.components.bridge.commit,
@@ -818,6 +838,36 @@ export function validateUatReport(report, run, candidate) {
     buildSha: candidate.components.bridge.commit,
     imageDigest: candidate.components.bridge.imageDigest,
   }, "UAT report.bridge");
+  const vobsubCues = [
+    { cue: 1, text: "JUMPGATE VOBSUB 1", windowStartMs: 2_000, windowEndMs: 5_000 },
+    { cue: 2, text: "JUMPGATE VOBSUB 2", windowStartMs: 7_000, windowEndMs: 10_000 },
+    { cue: 3, text: "JUMPGATE VOBSUB 3", windowStartMs: 12_000, windowEndMs: 15_000 },
+  ];
+  if (!Array.isArray(report.vobsubRenderEvidence) || report.vobsubRenderEvidence.length !== 3) {
+    fail("UAT report must contain exactly three VobSub render captures");
+  }
+  for (const [index, capture] of report.vobsubRenderEvidence.entries()) {
+    const path = `UAT report.vobsubRenderEvidence[${index}]`;
+    assertExactKeys(capture, ["cue", "text", "windowStartMs", "windowEndMs", "status", "sha256", "capturePath", "visualReview", "privacyReview"], path);
+    assertExactValue(capture, {
+      ...vobsubCues[index],
+      status: "pass",
+      sha256: capture.sha256,
+      capturePath: `release/evidence/${run.deviceClass}-vobsub-cue-${index + 1}.png`,
+      visualReview: "cue-and-time-rail-confirmed",
+      privacyReview: "sanitized-for-publication",
+    }, path);
+    assertHash(capture.sha256, `${path}.sha256`);
+  }
+  if (new Set(report.vobsubRenderEvidence.map((capture) => capture.sha256)).size !== 3) {
+    fail("UAT report VobSub render captures must be distinct images");
+  }
+  if (
+    !Array.isArray(run.vobsubCaptureSha256) ||
+    JSON.stringify(run.vobsubCaptureSha256) !== JSON.stringify(report.vobsubRenderEvidence.map((capture) => capture.sha256))
+  ) {
+    fail("UAT report VobSub render capture hashes must match its index record");
+  }
   const requiredCases = requiredUatCasesForDevice(run.deviceClass);
   if (!Array.isArray(report.cases) || report.cases.length !== requiredCases.length) {
     fail(`UAT report must contain every case required for ${run.deviceClass} exactly once`);
@@ -1826,12 +1876,13 @@ async function verifyPublicCandidate(candidate) {
   return { missingPullRequests: [...bridgeMissing, ...kodiMissing] };
 }
 
-async function verifyEvidenceArtifacts(evidence, candidate) {
+export async function verifyEvidenceArtifacts(evidence, candidate) {
   await Promise.all(
     evidence.runs.map(async (run) => {
-      const blob = parseEvidenceBlobUrl(run.evidenceUrl);
-      const bytes = await fetchBytes(
+      const blob = parseCanonicalUatReportUrl(run.evidenceUrl, run.deviceClass);
+      const bytes = await fetchBoundedBytes(
         `https://raw.githubusercontent.com/ruizkinio/${blob.repository}/${blob.commit}/${blob.filePath}`,
+        2 * 1024 * 1024,
       );
       const actual = createHash("sha256").update(bytes).digest("hex");
       if (actual !== run.evidenceSha256) {
@@ -1844,6 +1895,16 @@ async function verifyEvidenceArtifacts(evidence, candidate) {
         fail(`UAT evidence artifact is not JSON: ${run.evidenceUrl}`);
       }
       validateUatReport(report, run, candidate);
+      await Promise.all(report.vobsubRenderEvidence.map(async (capture) => {
+        const captureUrl =
+          `https://raw.githubusercontent.com/ruizkinio/${blob.repository}/${blob.commit}/` +
+          capture.capturePath;
+        const captureBytes = await fetchBoundedBytes(captureUrl, 20 * 1024 * 1024);
+        if (createHash("sha256").update(captureBytes).digest("hex") !== capture.sha256) {
+          fail(`VobSub render capture digest does not match cue ${capture.cue}`);
+        }
+        validatePublicEvidencePng(captureBytes);
+      }));
     }),
   );
 }

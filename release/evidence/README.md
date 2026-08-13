@@ -26,10 +26,26 @@ npm run uat:evidence -- init --device-class tv --manufacturer Google \
 npm run uat:evidence -- record --workbook .uat/tv.json \
   --case lifecycle/start-first-frames \
   --observation "First rendered frames appeared and playback remained responsive."
+npm run uat:evidence -- record-vobsub --workbook .uat/tv.json \
+  --cue 1 --capture release/evidence/tv-vobsub-cue-1.png \
+  --visual-review cue-and-time-rail-confirmed \
+  --privacy-review sanitized-for-publication
 npm run uat:evidence -- status --workbook .uat/tv.json
 npm run uat:evidence -- finalize --workbook .uat/tv.json \
   --output release/evidence/tv.json
 ```
+
+Each device report requires three PNG captures named
+`<device>-vobsub-cue-1.png` through `<device>-vobsub-cue-3.png` beside the finalized
+JSON report. Capture each exact cue while the fixture's visible progress rail lies in
+its locked media-time window. Inspect each capture before providing both required review
+attestations: the exact cue and time rail must be visible, and the image must be safe to
+publish. The recorder rejects duplicate captures, malformed or undecodable PNGs, every ancillary
+or private chunk, alpha channels, non-canonical input paths, and captures without both
+attestations. All six phone/TV captures must have distinct hashes. Release validation
+downloads the exact paths from the report's immutable commit and repeats structure and
+hash verification. Do not include notifications, account labels, pairing codes, private
+URLs, QR codes, or other unrelated screen content.
 
 Commit the finalized phone and TV reports first. In a second commit, build
 `physical-uat.json` using immutable blob URLs at that first commit SHA:
@@ -43,8 +59,9 @@ npm run uat:evidence -- index \
   --output release/evidence/physical-uat.json
 ```
 
-`evidenceUrl` must be an immutable public blob URL in a Jumpgate repository at a full
-commit SHA. The validator downloads that blob and verifies `evidenceSha256`; issue pages,
+`evidenceUrl` must be the canonical `release/evidence/phone.json` or
+`release/evidence/tv.json` immutable blob URL in the Jumpgate repository at a full commit
+SHA. The validator downloads that blob and verifies `evidenceSha256`; issue pages,
 branch URLs, expiring Action artifacts, query strings, and fragments are rejected. Serial
 numbers, account names, private URLs, tokens, logs, pairing data, and QR images are not
 allowed in either the index or the evidence blob.

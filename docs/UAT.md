@@ -163,7 +163,14 @@ Test at least one valid result from each available class:
 - [`provider-matrix/signed-redirect`] Provider-proxied/signed URL with bounded redirects.
 - [`provider-matrix/subtitle-text`] Text subtitle provider.
 - [`provider-matrix/subtitle-ass`] ASS/SSA subtitle provider.
-- [`provider-matrix/subtitle-vobsub`] VobSub archive source when available.
+- [`provider-matrix/subtitle-vobsub`] Use the deterministic Jumpgate VobSub fixture on
+  both devices. Capture the exact visible bitmap text `JUMPGATE VOBSUB 1`, `2`, and `3`
+  while the media progress rail shows the respective 2-5, 7-10, and 12-15 second
+  windows. Before recording each capture, inspect it and explicitly attest that the exact
+  cue/time rail are visible and that no notification, account label, pairing code, private
+  URL, QR code, or unrelated screen content is present. The six captures across both devices
+  must be distinct. Evidence PNGs are canonical RGB-only files without ancillary/private chunks
+  or alpha channels. A delivered IDX/SUB pair without visible rendering is a failure.
 
 For each source, record whether canonical identity was claimed. Transport success and
 identity success are separate results.
@@ -253,7 +260,9 @@ Use Trakt's account activity and sanitized device logs to verify:
 - [`subtitles/text-ass-fidelity`] Text and ASS/SSA content retains expected text, timing,
   encoding, and styling.
 - [`subtitles/vobsub-atomic-pair`] VobSub publishes a complete matching IDX/SUB pair before
-  Kodi injection.
+  Kodi injection. The finalized report must hash-bind the three PNG render captures;
+  they are committed beside the report as `<device>-vobsub-cue-1.png` through
+  `<device>-vobsub-cue-3.png`.
 - [`subtitles/picker-controls`] Subtitle picker, enable/disable, language selection, and
   delay controls work.
 - [`subtitles/replacement-generation`] Replacing a subtitle removes the previous generation
