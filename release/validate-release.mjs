@@ -20,7 +20,7 @@ export const COMPONENT_POLICIES = Object.freeze({
     auditedFiles: Object.freeze([
       Object.freeze({
         path: ".github/workflows/fly-deploy.yml",
-        sha256: "a4998b4064cf98c5bba6bd8cfeb782e53a66a77a2c126049701dd5e1870599eb",
+        sha256: "2cda1aca12ff4a1a3b3e2f45c157660c21d1e212a6f32583551fbddddb55ddff",
       }),
       Object.freeze({
         path: "scripts/ci/fly-managed-rollout.js",
@@ -36,11 +36,11 @@ export const COMPONENT_POLICIES = Object.freeze({
       }),
       Object.freeze({
         path: "package.json",
-        sha256: "49fa6223dfd7424757af071f63b2862dacf39513d85117ddb4e482fc01898841",
+        sha256: "0afead6fde8d3ed72e8f98d49f2883ef10d3917cbf646ce7a8828c1cdbe05d51",
       }),
       Object.freeze({
         path: "package-lock.json",
-        sha256: "f99690d0f821d8f399aa2c37ddc15722751712e109a3b44c3ba8a92cd3135a91",
+        sha256: "00e73f23ee5363e2e753d81e28cba047bc8bce7ba5a360be00608b792dd18016",
       }),
       Object.freeze({
         path: ".npmrc",
@@ -52,7 +52,7 @@ export const COMPONENT_POLICIES = Object.freeze({
       }),
     ]),
     requiredPullRequests: Object.freeze([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
     ]),
   }),
   kodi: Object.freeze({
@@ -78,7 +78,7 @@ export const COMPONENT_POLICIES = Object.freeze({
       }),
       Object.freeze({
         path: "tools/ci/jumpgate/test-android-branding.py",
-        sha256: "681283b47bb457086ef9fc7b8ed838164a2f8c047433e58e96036bb38a595812",
+        sha256: "67b304ab140109a14bb630791fe6aeb6180ad6e7167456f759ecd29e76d5c4e6",
       }),
       Object.freeze({
         path: "tools/ci/jumpgate/test-jumpgate-android-release-workflow.py",
@@ -134,7 +134,7 @@ export const COMPONENT_POLICIES = Object.freeze({
       finalBaseBranch: "release/clean-history-v3",
       cleanAnchor: "d48dbc6df68826c39636a511a8d08496134d98a7",
       protectedBranch: "master",
-      postCleanPullRequests: Object.freeze([7, 8, 10, 11, 12, 13, 14, 15, 16]),
+      postCleanPullRequests: Object.freeze([7, 8, 10, 11, 12, 13, 14, 15, 16, 17]),
     }),
   }),
 });
@@ -1381,7 +1381,7 @@ export async function verifyComponentAuditedFiles(
     const bytes = Buffer.from(await loadBytes(url));
     const actual = createHash("sha256").update(bytes).digest("hex");
     if (actual !== descriptor.sha256) {
-      fail(`${name} audited bytes at the candidate commit do not match policy`);
+      fail(`${name} audited bytes at the candidate commit do not match policy: ${descriptor.path}`);
     }
     verified[descriptor.path] = actual;
   }

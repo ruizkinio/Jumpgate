@@ -365,10 +365,10 @@ test("only ancestor or identical commits satisfy public reachability", () => {
 
 test("rewritten Kodi history requires the exact clean anchor and protected PR chain", () => {
   const history = COMPONENT_POLICIES.kodi.reviewedHistory;
-  const mergeShas = ["7", "8", "9", "a", "b", "c", "d", "e", "f"].map((value) =>
+  const mergeShas = ["7", "8", "9", "a", "b", "c", "d", "e", "f", "1"].map((value) =>
     value.repeat(40),
   );
-  const headShas = ["0", "1", "2", "3", "4", "5", "6", "7", "8"].map((value) =>
+  const headShas = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"].map((value) =>
     value.repeat(40),
   );
   const component = { commit: mergeShas.at(-1) };
@@ -507,7 +507,7 @@ test("rewritten Kodi history requires the exact clean anchor and protected PR ch
   );
 
   assert.deepEqual(COMPONENT_POLICIES.bridge.requiredPullRequests, [
-    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
+    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
   ]);
 });
 
@@ -563,7 +563,7 @@ test("audited component executable closures are exact and reject byte or policy 
         const path = new URL(url).pathname.split(`/${component.commit}/`)[1];
         return path === changedPath ? Buffer.from("changed\n") : audited.get(path);
       }),
-      /do not match policy/,
+      new RegExp(`do not match policy: ${changedPath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`),
       changedPath,
     );
   }
@@ -590,12 +590,12 @@ test("audited component executable closures are exact and reject byte or policy 
   assert.deepEqual(
     COMPONENT_POLICIES.bridge.auditedFiles.map(({ path, sha256 }) => ({ path, sha256 })),
     [
-      [".github/workflows/fly-deploy.yml", "a4998b4064cf98c5bba6bd8cfeb782e53a66a77a2c126049701dd5e1870599eb"],
+      [".github/workflows/fly-deploy.yml", "2cda1aca12ff4a1a3b3e2f45c157660c21d1e212a6f32583551fbddddb55ddff"],
       ["scripts/ci/fly-managed-rollout.js", "9cc954b815c012130e636f9fc2944873561efe7d1b3cf9f1bb7068f9cee7245f"],
       ["scripts/ci/deployment-attestation.js", "8bdd29ef1c9ae853bf90ed438f39d1083ea05526779e553971833ee00c87ffc0"],
       ["scripts/ci/http-smoke.js", "c1a658a8e17d4eed4041c71ac8834fe9ef254a59c9f075a81b10cdd83a223ff0"],
-      ["package.json", "49fa6223dfd7424757af071f63b2862dacf39513d85117ddb4e482fc01898841"],
-      ["package-lock.json", "f99690d0f821d8f399aa2c37ddc15722751712e109a3b44c3ba8a92cd3135a91"],
+      ["package.json", "0afead6fde8d3ed72e8f98d49f2883ef10d3917cbf646ce7a8828c1cdbe05d51"],
+      ["package-lock.json", "00e73f23ee5363e2e753d81e28cba047bc8bce7ba5a360be00608b792dd18016"],
       [".npmrc", "89570b4333de5a4920e113d299e774c671b4e83ebfe34757ad27c3960a7bd269"],
       ["fly.toml", "723cfbe7a912d2d2bd0b70f7e113d6e676349825a5a875d250a891a09dc05c99"],
     ].map(([path, sha256]) => ({ path, sha256 })),
