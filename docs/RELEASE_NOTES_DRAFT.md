@@ -54,8 +54,8 @@ code, token, or provider URL.
 | `Jumpgate-22.0-ALPHA2-Jumpgate-3.0.0-armeabi-v7a.apk` | `9ff620c0d07f7dffd960a0b7620b30dfcbbdb7efcbe5e969ac719b7d643ab763` | `armeabi-v7a` | `io.github.ruizkinio.jumpgate` | `10625572b5f34c5125b030dd5ab5fd40bdcd263d0fa8e2073ddee70435970551` |
 
 - Jumpgate Kodi commit: `b105087fb2ec00db4576e2f4b1221f9c45acd84f`
-- Bridge commit: `28848c13ae515c651e267e1f1ab9f24ebabd168c`
-- Bridge image digest: `sha256:05e9d5a79aaff27a81b61f548bef78933ec541d5af59b1d1f2bcb2cc3ca17b6a`
+- Bridge commit: `a2716ae68e9ce88561ed0ebc9ec1092cd20c3535`
+- Bridge image digest: `sha256:08599364f5bfdc6573bdf8e4d0e91ee4e0d7e38433e60fc993773e55dce21618`
 - Candidate lock commit: `86c5ee83211c48c49b386aa0fe3df0ec3d61c47a`
 - Protected non-physical release validation: `https://github.com/ruizkinio/Jumpgate/actions/runs/31706953795`
 - Sanitized device UAT evidence: `{{UAT_EVIDENCE_URL}}`

@@ -5,11 +5,11 @@ candidate is locked to these public component commits:
 
 | Input | Public branch | Candidate commit |
 | --- | --- | --- |
-| Bridge | `Jumpgate-bridge/main` | `28848c13ae515c651e267e1f1ab9f24ebabd168c` |
+| Bridge | `Jumpgate-bridge/main` | `a2716ae68e9ce88561ed0ebc9ec1092cd20c3535` |
 | Kodi | `Jumpgate-kodi/master` | `b105087fb2ec00db4576e2f4b1221f9c45acd84f` |
 
 The Bridge is deployed at immutable image digest
-`sha256:05e9d5a79aaff27a81b61f548bef78933ec541d5af59b1d1f2bcb2cc3ca17b6a`.
+`sha256:08599364f5bfdc6573bdf8e4d0e91ee4e0d7e38433e60fc993773e55dce21618`.
 Protected deployment provenance and live health checks pass for that digest.
 
 Kodi's protected stable release workflow produced signed `arm64-v8a` and
@@ -24,6 +24,9 @@ physical UAT passes.
 - Bridge deployment attestation, live image digest, `/health/live`, `/health/ready`,
   and `/version` pass.
 - Kodi host tests and both Android ABI builds pass protected CI.
+- The deterministic UAT-only VobSub provider passes live HTTPS transport and
+  integrity checks against the exact merged Bridge commit. Its isolated Fly image
+  is test infrastructure and is not part of the production candidate lock.
 - The reproducible public-history audit in protected run `31706953795` reports zero
   unresolved findings. That run also independently verified the final Jumpgate and
   Stremio APKs, Bridge deployment provenance, live Bridge state, and current GitHub

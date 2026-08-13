@@ -36,7 +36,7 @@ export const COMPONENT_POLICIES = Object.freeze({
       }),
       Object.freeze({
         path: "package.json",
-        sha256: "0afead6fde8d3ed72e8f98d49f2883ef10d3917cbf646ce7a8828c1cdbe05d51",
+        sha256: "9676fb8056525cc68504fb91565c857f81fa5a12f75548b8b8ba0be65534c2c7",
       }),
       Object.freeze({
         path: "package-lock.json",
@@ -52,7 +52,7 @@ export const COMPONENT_POLICIES = Object.freeze({
       }),
     ]),
     requiredPullRequests: Object.freeze([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
     ]),
   }),
   kodi: Object.freeze({
