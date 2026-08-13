@@ -6,7 +6,7 @@
       "repository": "https://github.com/ruizkinio/Jumpgate-bridge.git",
       "branch": "main",
       "commit": "1a37c36095cbd933af955936928ac3fd370e8206",
-      "imageDigest": "sha256:7933c6ced7b5d086f833238af77a10cc0208454c3159cbb92599d856a498a2fd",
+      "imageDigest": "sha256:7d6c712efebdfcdf0c2d5136d5fb4cfe998f81a0e86d41b0536fd7a352498319",
       "provenance": {
         "runUrl": "https://github.com/ruizkinio/Jumpgate-bridge/actions/runs/30732389986",
         "workflowId": 320575057,
