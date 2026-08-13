@@ -50,14 +50,14 @@ code, token, or provider URL.
 
 | Artifact | SHA-256 | ABI | Package | Signer SHA-256 |
 | --- | --- | --- | --- | --- |
-| `Jumpgate-22.0-ALPHA2-Jumpgate-3.0.0-arm64-v8a.apk` | `5e1f43083d2a0fdd9e858131f2197c9af984114909cac0ad8432c6ba6ecb9c7e` | `arm64-v8a` | `io.github.ruizkinio.jumpgate` | `10625572b5f34c5125b030dd5ab5fd40bdcd263d0fa8e2073ddee70435970551` |
-| `Jumpgate-22.0-ALPHA2-Jumpgate-3.0.0-armeabi-v7a.apk` | `f30a7edfccaa7b70f2c915f747856a2e619396e005b41cbbd93ed8a66150c798` | `armeabi-v7a` | `io.github.ruizkinio.jumpgate` | `10625572b5f34c5125b030dd5ab5fd40bdcd263d0fa8e2073ddee70435970551` |
+| `Jumpgate-22.0-ALPHA2-Jumpgate-3.0.0-arm64-v8a.apk` | `0ffec97546bf7e946e24826cebd2f98816122f84a03cef8ad208a68d4dac312a` | `arm64-v8a` | `io.github.ruizkinio.jumpgate` | `10625572b5f34c5125b030dd5ab5fd40bdcd263d0fa8e2073ddee70435970551` |
+| `Jumpgate-22.0-ALPHA2-Jumpgate-3.0.0-armeabi-v7a.apk` | `9ff620c0d07f7dffd960a0b7620b30dfcbbdb7efcbe5e969ac719b7d643ab763` | `armeabi-v7a` | `io.github.ruizkinio.jumpgate` | `10625572b5f34c5125b030dd5ab5fd40bdcd263d0fa8e2073ddee70435970551` |
 
-- Jumpgate Kodi commit: `9cd5a416595825dccff0ac6f107f7217b9744e5e`
-- Bridge commit: `1a37c36095cbd933af955936928ac3fd370e8206`
-- Bridge image digest: `sha256:7d6c712efebdfcdf0c2d5136d5fb4cfe998f81a0e86d41b0536fd7a352498319`
-- Coordinated release commit: `{{COORDINATION_COMMIT}}`
-- Protected release validation: `{{RELEASE_VALIDATION_URL}}`
+- Jumpgate Kodi commit: `b105087fb2ec00db4576e2f4b1221f9c45acd84f`
+- Bridge commit: `28848c13ae515c651e267e1f1ab9f24ebabd168c`
+- Bridge image digest: `sha256:05e9d5a79aaff27a81b61f548bef78933ec541d5af59b1d1f2bcb2cc3ca17b6a`
+- Candidate lock commit: `86c5ee83211c48c49b386aa0fe3df0ec3d61c47a`
+- Protected non-physical release validation: `https://github.com/ruizkinio/Jumpgate/actions/runs/31706953795`
 - Sanitized device UAT evidence: `{{UAT_EVIDENCE_URL}}`
 
 ## Compatibility
