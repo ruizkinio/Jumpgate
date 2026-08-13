@@ -16,14 +16,15 @@ export const COMPONENT_POLICIES = Object.freeze({
     workflow: "Bridge CI and Release",
     workflowId: 320575057,
     workflowPath: ".github/workflows/fly-deploy.yml",
+    event: "push",
     auditedFiles: Object.freeze([
       Object.freeze({
         path: ".github/workflows/fly-deploy.yml",
-        sha256: "1c2cc3f72ea000b489218e612319a87131c4d4f4b5e4faf2eeecf857dc2305ab",
+        sha256: "a4998b4064cf98c5bba6bd8cfeb782e53a66a77a2c126049701dd5e1870599eb",
       }),
       Object.freeze({
         path: "scripts/ci/fly-managed-rollout.js",
-        sha256: "2e0af3926869a36c3d81f44bb59cb5cfda49a0d8bb03c8e96b8c780a2ff2bad0",
+        sha256: "9cc954b815c012130e636f9fc2944873561efe7d1b3cf9f1bb7068f9cee7245f",
       }),
       Object.freeze({
         path: "scripts/ci/deployment-attestation.js",
@@ -47,22 +48,81 @@ export const COMPONENT_POLICIES = Object.freeze({
       }),
       Object.freeze({
         path: "fly.toml",
-        sha256: "b594218d0650290789fbe97f64bd29da217c73c1c06a9e12002df9cbd12cfb23",
+        sha256: "723cfbe7a912d2d2bd0b70f7e113d6e676349825a5a875d250a891a09dc05c99",
       }),
     ]),
-    requiredPullRequests: Object.freeze([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]),
+    requiredPullRequests: Object.freeze([
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
+    ]),
   }),
   kodi: Object.freeze({
     repository: "https://github.com/ruizkinio/Jumpgate-kodi.git",
     branch: "master",
     slug: "ruizkinio/Jumpgate-kodi",
-    workflow: "Jumpgate Android CI",
-    workflowId: 312418811,
-    workflowPath: ".github/workflows/jumpgate-android.yml",
+    workflow: "Jumpgate Android Release",
+    workflowId: 321201768,
+    workflowPath: ".github/workflows/jumpgate-android-release.yml",
+    event: "workflow_dispatch",
     auditedFiles: Object.freeze([
       Object.freeze({
         path: ".github/workflows/jumpgate-android.yml",
-        sha256: "f5cb7bca3b60fd7578fe30fd1fde4aff286d05fc77005629af5b6c791934c3b4",
+        sha256: "7a4fc62b629aab57534406c5741f437bf4c28984612f1cac482b5fe560934de7",
+      }),
+      Object.freeze({
+        path: ".github/workflows/jumpgate-android-release.yml",
+        sha256: "2da415e9e4aac890e7a6f3bff388e4de2e674d36282ef1bca71681e0fd98fbc5",
+      }),
+      Object.freeze({
+        path: ".github/workflows/jumpgate-release-reconcile.yml",
+        sha256: "fbaeb4a5e0d1dd8b65d7ea26a3867567c9c3893c24788af3ca18dbf0b9fbd6e2",
+      }),
+      Object.freeze({
+        path: "tools/ci/jumpgate/test-android-branding.py",
+        sha256: "681283b47bb457086ef9fc7b8ed838164a2f8c047433e58e96036bb38a595812",
+      }),
+      Object.freeze({
+        path: "tools/ci/jumpgate/test-jumpgate-android-release-workflow.py",
+        sha256: "51622fcf737cb9b97df6e6d1697598623272caeb19f4b2ca6c873fee95b7a915",
+      }),
+      Object.freeze({
+        path: "tools/ci/jumpgate/test-jumpgate-release-reconcile-workflow.py",
+        sha256: "497212eea13f62412f264a1a664f82ec3552573fd634b6c2b15f05a89a6aa659",
+      }),
+      Object.freeze({
+        path: "tools/ci/jumpgate/test-manager-addon.py",
+        sha256: "057cccb48f3cef60f382f8b926f1820fc0e2c6fb61adfd80ea16f9c12437cf4f",
+      }),
+      Object.freeze({
+        path: "tools/ci/jumpgate/test-verify-android-apk.sh",
+        sha256: "2dbd5554946956b819ed3c04c274ff0383d7f5f79516d068b9b753ef068f6eba",
+      }),
+      Object.freeze({
+        path: "tools/ci/jumpgate/test-verify-android-python-runtime.py",
+        sha256: "2201bf08bac2c1804542abecb6399a2443a43b7571f724704acb0e333ddfb984",
+      }),
+      Object.freeze({
+        path: "tools/ci/jumpgate/test-verify-android-release.sh",
+        sha256: "6be01385d237f47c013df4647b0c6d355d33cce7c1ac9392682b18296e3e7520",
+      }),
+      Object.freeze({
+        path: "tools/ci/jumpgate/test-verify-shairplay-crypto-symbols.sh",
+        sha256: "36aec1fba5efa1b1aab13dd982ae41511010cc0e89e4293d125050158fe26de6",
+      }),
+      Object.freeze({
+        path: "tools/ci/jumpgate/verify-android-apk.sh",
+        sha256: "f9049f1ff977ac4b99241e4e33ed58fb1f6a0b05216b7a46dd94ba272e56a8f4",
+      }),
+      Object.freeze({
+        path: "tools/ci/jumpgate/verify-android-python-runtime.py",
+        sha256: "bd5f58f4e628ef20c3414f84c2244cf640721009e56e0507ea05d21cb4146a82",
+      }),
+      Object.freeze({
+        path: "tools/ci/jumpgate/verify-android-release.sh",
+        sha256: "e3225a51f07960ac099a4cc255fb061a98c2085e1d43e3fe496657ae49c710a5",
+      }),
+      Object.freeze({
+        path: "tools/ci/jumpgate/verify-shairplay-crypto-symbols.sh",
+        sha256: "53d88fe3fc957c2b245a501ddeeafd8f1d45a951721b703b960f1bdfab8daa90",
       }),
     ]),
     reviewedHistory: Object.freeze({
@@ -72,6 +132,9 @@ export const COMPONENT_POLICIES = Object.freeze({
       sourceBaseBranch: "master",
       finalTreePullRequest: 6,
       finalBaseBranch: "release/clean-history-v3",
+      cleanAnchor: "d48dbc6df68826c39636a511a8d08496134d98a7",
+      protectedBranch: "master",
+      postCleanPullRequests: Object.freeze([7, 8, 10, 11, 12, 13, 14, 15, 16]),
     }),
   }),
 });
@@ -102,8 +165,8 @@ export const KODI_RELEASE_POLICY = Object.freeze({
     versionName: "22.0-ALPHA2-Jumpgate-3.0.0",
   }),
   signer: Object.freeze({
-    state: "not-yet-provisioned",
-    certificateSha256: null,
+    state: "provisioned",
+    certificateSha256: "10625572b5f34c5125b030dd5ab5fd40bdcd263d0fa8e2073ddee70435970551",
   }),
 });
 
@@ -356,11 +419,14 @@ function validateProvenance(provenance, policy, path, extraKeys = []) {
   if (
     provenance.workflowId !== policy.workflowId ||
     provenance.workflowPath !== policy.workflowPath ||
-    provenance.event !== "push" ||
+    provenance.event !== policy.event ||
     provenance.branch !== policy.branch ||
     provenance.headRepository !== policy.slug
   ) {
-    fail(`${path} must identify the protected push workflow on ${policy.slug}#${policy.branch}`);
+    fail(
+      `${path} must identify the protected ${policy.event} workflow on ` +
+        `${policy.slug}#${policy.branch}`,
+    );
   }
 }
 
@@ -1454,14 +1520,21 @@ async function verifyComponentCommit(component, policy, name) {
   }
 }
 
-async function verifyProvenanceRun(component, policy, name) {
+export function expectedWorkflowRunName(component, policy, coordinatedVersion) {
+  return policy.event === "workflow_dispatch"
+    ? `Release v${coordinatedVersion} from ${component.commit}`
+    : policy.workflow;
+}
+
+async function verifyProvenanceRun(component, policy, name, coordinatedVersion) {
   const provenance = component.provenance;
   const runId = parseGithubActionsRunUrl(provenance.runUrl, policy.slug);
   const run = await fetchJson(`https://api.github.com/repos/${policy.slug}/actions/runs/${runId}`);
+  const expectedRunName = expectedWorkflowRunName(component, policy, coordinatedVersion);
   if (
     run.html_url !== provenance.runUrl ||
     run.head_sha !== component.commit ||
-    run.name !== policy.workflow ||
+    run.name !== expectedRunName ||
     run.workflow_id !== policy.workflowId ||
     run.path !== policy.workflowPath ||
     run.event !== provenance.event ||
@@ -1499,6 +1572,7 @@ async function verifyRunArtifactDescriptors(slug, runId, descriptors) {
 export function reviewedCleanHistoryMatchesCandidate(proof, component, policy) {
   const history = policy.reviewedHistory;
   const candidate = proof?.candidateGitCommit;
+  const cleanAnchor = proof?.cleanAnchorGitCommit;
   const upstreamBase = proof?.upstreamBaseGitCommit;
   const sourcePull = proof?.sourcePull;
   const sourceHead = proof?.sourceHeadGitCommit;
@@ -1507,18 +1581,23 @@ export function reviewedCleanHistoryMatchesCandidate(proof, component, policy) {
   const finalMerge = proof?.finalMergeGitCommit;
   const developmentPulls = proof?.developmentPulls;
   const developmentCompares = proof?.developmentCompares;
+  const postCleanPulls = proof?.postCleanPulls;
+  const postCleanMergeGitCommits = proof?.postCleanMergeGitCommits;
   const candidateTree = candidate?.tree?.sha;
+  const cleanAnchorTree = cleanAnchor?.tree?.sha;
   const sourceTree = sourceHead?.tree?.sha;
   const finalBaseTree = finalBase?.tree?.sha;
   const finalTree = finalMerge?.tree?.sha;
 
   // The source PR is review evidence only: merging it would import the retired development ancestry.
+  // The clean anchor reproduces that reviewed tree, then protected PR merges continue from it exactly.
   return Boolean(
     history &&
       component.commit === candidate?.sha &&
-      Array.isArray(candidate?.parents) &&
-      candidate.parents.length === 1 &&
-      candidate.parents[0]?.sha === history.upstreamBase &&
+      cleanAnchor?.sha === history.cleanAnchor &&
+      Array.isArray(cleanAnchor?.parents) &&
+      cleanAnchor.parents.length === 1 &&
+      cleanAnchor.parents[0]?.sha === history.upstreamBase &&
       upstreamBase?.sha === history.upstreamBase &&
       sourcePull?.number === history.sourceTreePullRequest &&
       sourcePull.merged_at === null &&
@@ -1533,8 +1612,13 @@ export function reviewedCleanHistoryMatchesCandidate(proof, component, policy) {
       finalPull.head?.repo?.full_name === policy.slug &&
       finalPull.base?.sha === finalBase?.sha &&
       finalPull.merge_commit_sha === finalMerge?.sha &&
+      Array.isArray(finalMerge?.parents) &&
+      finalMerge.parents.length === 2 &&
+      finalMerge.parents[0]?.sha === finalBase?.sha &&
+      finalMerge.parents[1]?.sha === finalPull.head?.sha &&
       /^[0-9a-f]{40}$/.test(candidateTree ?? "") &&
-      candidateTree === finalTree &&
+      /^[0-9a-f]{40}$/.test(cleanAnchorTree ?? "") &&
+      cleanAnchorTree === finalTree &&
       /^[0-9a-f]{40}$/.test(sourceTree ?? "") &&
       sourceTree === finalBaseTree &&
       Array.isArray(developmentPulls) &&
@@ -1551,7 +1635,33 @@ export function reviewedCleanHistoryMatchesCandidate(proof, component, policy) {
             pull.head?.repo?.full_name === policy.slug &&
             commitContainsAncestor(developmentCompares[index], pull.merge_commit_sha, sourceHead.sha),
         );
-      }),
+      }) &&
+      Array.isArray(postCleanPulls) &&
+      Array.isArray(postCleanMergeGitCommits) &&
+      postCleanPulls.length === history.postCleanPullRequests.length &&
+      postCleanMergeGitCommits.length === history.postCleanPullRequests.length &&
+      history.postCleanPullRequests.every((number, index) => {
+        const pull = postCleanPulls[index];
+        const merge = postCleanMergeGitCommits[index];
+        const previousSha = index === 0
+          ? cleanAnchor.sha
+          : postCleanMergeGitCommits[index - 1]?.sha;
+        return Boolean(
+          pull?.number === number &&
+            pull.merged_at &&
+            pull.base?.ref === history.protectedBranch &&
+            pull.base?.repo?.full_name === policy.slug &&
+            pull.head?.repo?.full_name === policy.slug &&
+            pull.base?.sha === previousSha &&
+            /^[0-9a-f]{40}$/.test(pull.head?.sha ?? "") &&
+            pull.merge_commit_sha === merge?.sha &&
+            Array.isArray(merge?.parents) &&
+            merge.parents.length === 2 &&
+            merge.parents[0]?.sha === previousSha &&
+            merge.parents[1]?.sha === pull.head.sha,
+        );
+      }) &&
+      postCleanMergeGitCommits.at(-1)?.sha === candidate.sha,
   );
 }
 
@@ -1572,9 +1682,9 @@ async function missingRequiredPullRequests(component, policy, name) {
 
 async function reviewedKodiHistoryMissing(component, policy) {
   const history = policy.reviewedHistory;
-  const [candidateGitCommit, upstreamBaseGitCommit, sourcePull, finalPull, ...developmentPulls] =
-    await Promise.all([
+  const initialProof = await Promise.all([
       fetchJson(`https://api.github.com/repos/${policy.slug}/git/commits/${component.commit}`),
+      fetchJson(`https://api.github.com/repos/${policy.slug}/git/commits/${history.cleanAnchor}`),
       fetchJson(
         `https://api.github.com/repos/${KODI_UPSTREAM_REPOSITORY}/git/commits/${history.upstreamBase}`,
       ),
@@ -1585,16 +1695,28 @@ async function reviewedKodiHistoryMissing(component, policy) {
       ...history.developmentPullRequests.map((number) =>
         fetchJson(`https://api.github.com/repos/${policy.slug}/pulls/${number}`),
       ),
+      ...history.postCleanPullRequests.map((number) =>
+        fetchJson(`https://api.github.com/repos/${policy.slug}/pulls/${number}`),
+      ),
     ]);
+  const candidateGitCommit = initialProof[0];
+  const cleanAnchorGitCommit = initialProof[1];
+  const upstreamBaseGitCommit = initialProof[2];
+  const sourcePull = initialProof[3];
+  const finalPull = initialProof[4];
+  const developmentStart = 5;
+  const postCleanStart = developmentStart + history.developmentPullRequests.length;
+  const developmentPulls = initialProof.slice(developmentStart, postCleanStart);
+  const postCleanPulls = initialProof.slice(postCleanStart);
   if (
     !/^[0-9a-f]{40}$/.test(sourcePull?.head?.sha ?? "") ||
     !/^[0-9a-f]{40}$/.test(finalPull?.base?.sha ?? "") ||
-    !/^[0-9a-f]{40}$/.test(finalPull?.merge_commit_sha ?? "")
+    !/^[0-9a-f]{40}$/.test(finalPull?.merge_commit_sha ?? "") ||
+    postCleanPulls.some((pull) => !/^[0-9a-f]{40}$/.test(pull?.merge_commit_sha ?? ""))
   ) {
     return ["Kodi clean-history review chain"];
   }
-  const [sourceHeadGitCommit, finalBaseGitCommit, finalMergeGitCommit, ...developmentCompares] =
-    await Promise.all([
+  const secondaryProof = await Promise.all([
       fetchJson(`https://api.github.com/repos/${policy.slug}/git/commits/${sourcePull.head.sha}`),
       fetchJson(`https://api.github.com/repos/${policy.slug}/git/commits/${finalPull.base.sha}`),
       fetchJson(
@@ -1603,10 +1725,21 @@ async function reviewedKodiHistoryMissing(component, policy) {
       ...developmentPulls.map((pull) =>
         githubCompare(policy.slug, pull.merge_commit_sha, sourcePull.head.sha),
       ),
+      ...postCleanPulls.map((pull) =>
+        fetchJson(`https://api.github.com/repos/${policy.slug}/git/commits/${pull.merge_commit_sha}`),
+      ),
     ]);
+  const sourceHeadGitCommit = secondaryProof[0];
+  const finalBaseGitCommit = secondaryProof[1];
+  const finalMergeGitCommit = secondaryProof[2];
+  const compareStart = 3;
+  const postMergeStart = compareStart + developmentPulls.length;
+  const developmentCompares = secondaryProof.slice(compareStart, postMergeStart);
+  const postCleanMergeGitCommits = secondaryProof.slice(postMergeStart);
   return reviewedCleanHistoryMatchesCandidate(
     {
       candidateGitCommit,
+      cleanAnchorGitCommit,
       upstreamBaseGitCommit,
       sourcePull,
       sourceHeadGitCommit,
@@ -1615,6 +1748,8 @@ async function reviewedKodiHistoryMissing(component, policy) {
       finalMergeGitCommit,
       developmentPulls,
       developmentCompares,
+      postCleanPulls,
+      postCleanMergeGitCommits,
     },
     component,
     policy,
@@ -1627,8 +1762,18 @@ async function verifyPublicCandidate(candidate) {
   const [bridgeMissing, kodiMissing, bridgeRunId, kodiRunId] = await Promise.all([
     missingRequiredPullRequests(candidate.components.bridge, COMPONENT_POLICIES.bridge, "Bridge"),
     reviewedKodiHistoryMissing(candidate.components.kodi, COMPONENT_POLICIES.kodi),
-    verifyProvenanceRun(candidate.components.bridge, COMPONENT_POLICIES.bridge, "Bridge"),
-    verifyProvenanceRun(candidate.components.kodi, COMPONENT_POLICIES.kodi, "Kodi"),
+      verifyProvenanceRun(
+        candidate.components.bridge,
+        COMPONENT_POLICIES.bridge,
+        "Bridge",
+        candidate.coordinatedVersion,
+      ),
+      verifyProvenanceRun(
+        candidate.components.kodi,
+        COMPONENT_POLICIES.kodi,
+        "Kodi",
+        candidate.coordinatedVersion,
+      ),
     verifyComponentCommit(candidate.components.bridge, COMPONENT_POLICIES.bridge, "Bridge"),
     verifyComponentCommit(candidate.components.kodi, COMPONENT_POLICIES.kodi, "Kodi"),
     verifyComponentAuditedFiles(
