@@ -13,8 +13,15 @@ import {
   validateEvidence,
   validateUatReport,
 } from "./validate-release.mjs";
+import { validatePublicEvidencePng } from "./png-evidence.mjs";
 
-const WORKBOOK_SCHEMA_VERSION = 2;
+const WORKBOOK_SCHEMA_VERSION = 3;
+const UAT_REPORT_SCHEMA_VERSION = 4;
+export const VOBSUB_RENDER_CUES = Object.freeze([
+  Object.freeze({ cue: 1, text: "JUMPGATE VOBSUB 1", windowStartMs: 2_000, windowEndMs: 5_000 }),
+  Object.freeze({ cue: 2, text: "JUMPGATE VOBSUB 2", windowStartMs: 7_000, windowEndMs: 10_000 }),
+  Object.freeze({ cue: 3, text: "JUMPGATE VOBSUB 3", windowStartMs: 12_000, windowEndMs: 15_000 }),
+]);
 const UTF8_DECODER = new TextDecoder("utf-8", { fatal: true });
 const OBSERVATION_REJECTIONS = [
   [/(?:https?|stremio):\/\//i, "URLs"],
@@ -106,6 +113,52 @@ export function assertSanitizedObservation(observation) {
   return observation;
 }
 
+function emptyVobSubRenderEvidence() {
+  return VOBSUB_RENDER_CUES.map((cue) => ({
+    ...cue,
+    status: "pending",
+    sha256: "",
+    capturePath: "",
+    visualReview: "pending",
+    privacyReview: "pending",
+  }));
+}
+
+function validateVobSubRenderEvidence(entries, deviceClass, allowPending) {
+  if (!Array.isArray(entries) || entries.length !== VOBSUB_RENDER_CUES.length) {
+    fail("VobSub render evidence must contain exactly three cue captures");
+  }
+  for (const [index, entry] of entries.entries()) {
+    assertExactKeys(
+      entry,
+      ["cue", "text", "windowStartMs", "windowEndMs", "status", "sha256", "capturePath", "visualReview", "privacyReview"],
+      `VobSub cue ${index + 1}`,
+    );
+    const expected = VOBSUB_RENDER_CUES[index];
+    assertSame(
+      { cue: entry.cue, text: entry.text, windowStartMs: entry.windowStartMs, windowEndMs: entry.windowEndMs },
+      expected,
+      `VobSub cue ${index + 1}`,
+    );
+    if (
+      entry.status === "pending" && allowPending && entry.sha256 === "" &&
+      entry.capturePath === "" && entry.visualReview === "pending" && entry.privacyReview === "pending"
+    ) continue;
+    if (entry.status !== "pass" || !/^[a-f0-9]{64}$/.test(entry.sha256)) {
+      fail(`VobSub cue ${index + 1} requires a passed PNG capture SHA-256`);
+    }
+    if (entry.capturePath !== `release/evidence/${deviceClass}-vobsub-cue-${index + 1}.png`) {
+      fail(`VobSub cue ${index + 1} capture path is not canonical`);
+    }
+    if (entry.visualReview !== "cue-and-time-rail-confirmed" || entry.privacyReview !== "sanitized-for-publication") {
+      fail(`VobSub cue ${index + 1} requires visual and privacy review attestations`);
+    }
+  }
+  const hashes = entries.filter((entry) => entry.status === "pass").map((entry) => entry.sha256);
+  if (new Set(hashes).size !== hashes.length) fail("VobSub cue captures must be distinct images");
+  return entries;
+}
+
 export function createWorkbook(candidate, input, now = new Date()) {
   validateCandidate(candidate);
   const device = validateDeviceInput(input, candidate);
@@ -115,6 +168,7 @@ export function createWorkbook(candidate, input, now = new Date()) {
     device,
     bridge: bridgeRecord(candidate),
     createdAt: now.toISOString(),
+    vobsubRenderEvidence: emptyVobSubRenderEvidence(),
     cases: requiredUatCasesForDevice(device.deviceClass).map((id) => ({
       id,
       status: "pending",
@@ -125,7 +179,7 @@ export function createWorkbook(candidate, input, now = new Date()) {
 
 export function validateWorkbook(workbook, candidate) {
   validateCandidate(candidate);
-  assertExactKeys(workbook, ["schemaVersion", "candidate", "device", "bridge", "createdAt", "cases"], "workbook");
+  assertExactKeys(workbook, ["schemaVersion", "candidate", "device", "bridge", "createdAt", "vobsubRenderEvidence", "cases"], "workbook");
   if (workbook.schemaVersion !== WORKBOOK_SCHEMA_VERSION) fail("unsupported workbook schemaVersion");
   assertSame(workbook.candidate, candidateRecord(candidate), "workbook candidate");
   assertSame(workbook.bridge, bridgeRecord(candidate), "workbook Bridge");
@@ -133,6 +187,7 @@ export function validateWorkbook(workbook, candidate) {
   assertExactKeys(workbook.device, Object.keys(expectedDevice), "workbook device");
   assertSame(workbook.device, expectedDevice, "workbook device");
   if (Number.isNaN(new Date(workbook.createdAt).valueOf())) fail("workbook createdAt is invalid");
+  validateVobSubRenderEvidence(workbook.vobsubRenderEvidence, workbook.device.deviceClass, true);
   const requiredCases = requiredUatCasesForDevice(workbook.device.deviceClass);
   if (!Array.isArray(workbook.cases) || workbook.cases.length !== requiredCases.length) {
     fail(`workbook must contain every UAT case required for ${workbook.device.deviceClass}`);
@@ -145,6 +200,34 @@ export function validateWorkbook(workbook, candidate) {
     if (entry.status === "pass") assertSanitizedObservation(entry.observation);
   }
   return workbook;
+}
+
+export function recordVobSubCue(workbook, candidate, cue, captureBytes, { capturePath, visualReview, privacyReview } = {}) {
+  validateWorkbook(workbook, candidate);
+  if (!Number.isInteger(cue) || cue < 1 || cue > VOBSUB_RENDER_CUES.length) {
+    fail("VobSub cue must be 1, 2, or 3");
+  }
+  validatePublicEvidencePng(captureBytes);
+  if (visualReview !== "cue-and-time-rail-confirmed") {
+    fail("VobSub cue capture requires --visual-review cue-and-time-rail-confirmed");
+  }
+  if (privacyReview !== "sanitized-for-publication") {
+    fail("VobSub cue capture requires --privacy-review sanitized-for-publication");
+  }
+  const captureSha256 = sha256(captureBytes);
+  const canonicalPath = `release/evidence/${workbook.device.deviceClass}-vobsub-cue-${cue}.png`;
+  if (capturePath !== canonicalPath) fail(`VobSub cue capture must be read from ${canonicalPath}`);
+  if (updatedVobSubHashes(workbook, cue).has(captureSha256)) fail("VobSub cue captures must be distinct images");
+  const updated = structuredClone(workbook);
+  updated.vobsubRenderEvidence[cue - 1] = {
+    ...VOBSUB_RENDER_CUES[cue - 1],
+    status: "pass",
+    sha256: captureSha256,
+    capturePath: canonicalPath,
+    visualReview,
+    privacyReview,
+  };
+  return validateWorkbook(updated, candidate);
 }
 
 export function recordPass(workbook, candidate, caseId, observation) {
@@ -162,15 +245,21 @@ export function finalizeWorkbook(workbook, candidate, now = new Date()) {
   validateWorkbook(workbook, candidate);
   const pending = workbook.cases.filter((entry) => entry.status !== "pass");
   if (pending.length > 0) fail(`cannot finalize: ${pending.length} UAT cases remain pending`);
+  validateVobSubRenderEvidence(workbook.vobsubRenderEvidence, workbook.device.deviceClass, false);
   const report = {
-    schemaVersion: 3,
+    schemaVersion: UAT_REPORT_SCHEMA_VERSION,
     candidate: workbook.candidate,
     device: workbook.device,
     testedAt: now.toISOString().replace(/\.\d{3}Z$/, "Z"),
     bridge: workbook.bridge,
+    vobsubRenderEvidence: workbook.vobsubRenderEvidence,
     cases: workbook.cases,
   };
-  validateUatReport(report, { ...report.device, testedAt: report.testedAt }, candidate);
+  validateUatReport(report, {
+    ...report.device,
+    testedAt: report.testedAt,
+    vobsubCaptureSha256: report.vobsubRenderEvidence.map((capture) => capture.sha256),
+  }, candidate);
   return report;
 }
 
@@ -178,12 +267,18 @@ function sha256(bytes) {
   return createHash("sha256").update(bytes).digest("hex");
 }
 
+function updatedVobSubHashes(workbook, replacedCue) {
+  return new Set(workbook.vobsubRenderEvidence
+    .filter((entry) => entry.status === "pass" && entry.cue !== replacedCue)
+    .map((entry) => entry.sha256));
+}
+
 export function createEvidenceIndex(candidate, reports, now = new Date()) {
   validateCandidate(candidate);
   if (!Array.isArray(reports) || reports.length !== 2) fail("exactly one phone and one TV report are required");
   const runs = reports.map(({ bytes, evidenceUrl }) => {
     if (!Buffer.isBuffer(bytes)) fail("report bytes must be a Buffer");
-    parseEvidenceBlobUrl(evidenceUrl);
+    const parsed = parseEvidenceBlobUrl(evidenceUrl);
     let report;
     try {
       report = JSON.parse(UTF8_DECODER.decode(bytes));
@@ -196,7 +291,11 @@ export function createEvidenceIndex(candidate, reports, now = new Date()) {
       evidenceSha256: sha256(bytes),
       evidenceUrl,
       caseCount: report.cases?.length,
+      vobsubCaptureSha256: report.vobsubRenderEvidence?.map((capture) => capture.sha256),
     };
+    if (parsed.repository !== "Jumpgate" || parsed.filePath !== `release/evidence/${run.deviceClass}.json`) {
+      fail(`evidenceUrl must be the canonical immutable Jumpgate ${run.deviceClass} UAT report URL`);
+    }
     validateUatReport(report, run, candidate);
     return run;
   });
@@ -231,12 +330,19 @@ function required(values, name) {
   return value;
 }
 
+function parseStrictInteger(value, name) {
+  if (!/^(?:0|[1-9][0-9]*)$/.test(value)) fail(`--${name} must be an integer`);
+  return Number(value);
+}
+
 function cliOptions() {
   return {
     candidate: { type: "string", default: resolve(dirname(fileURLToPath(import.meta.url)), "candidate.json") },
     output: { type: "string" }, workbook: { type: "string" }, "device-class": { type: "string" },
     manufacturer: { type: "string" }, model: { type: "string" }, "android-api": { type: "string" },
     abi: { type: "string" }, case: { type: "string" }, observation: { type: "string" },
+    cue: { type: "string" }, capture: { type: "string" }, "visual-review": { type: "string" },
+    "privacy-review": { type: "string" },
     "phone-report": { type: "string" }, "phone-url": { type: "string" }, "tv-report": { type: "string" },
     "tv-url": { type: "string" },
   };
@@ -263,11 +369,30 @@ export function runCli(args = process.argv.slice(2)) {
     console.log(`Recorded pass; ${updated.cases.filter((entry) => entry.status === "pending").length} cases remain.`);
     return;
   }
+  if (command === "record-vobsub") {
+    const path = required(values, "workbook");
+    const updated = recordVobSubCue(
+      readJson(path, "workbook"),
+      candidate,
+      parseStrictInteger(required(values, "cue"), "cue"),
+      readFileSync(required(values, "capture")),
+      {
+        capturePath: required(values, "capture").replaceAll("\\", "/"),
+        visualReview: required(values, "visual-review"),
+        privacyReview: required(values, "privacy-review"),
+      },
+    );
+    writeJsonAtomic(path, updated);
+    console.log(`Recorded VobSub cue capture ${required(values, "cue")}.`);
+    return;
+  }
   if (command === "status") {
     const workbook = validateWorkbook(readJson(required(values, "workbook"), "workbook"), candidate);
     const pending = workbook.cases.filter((entry) => entry.status === "pending");
-    console.log(`${workbook.device.deviceClass}: ${workbook.cases.length - pending.length}/${workbook.cases.length} passed.`);
+    const pendingCaptures = workbook.vobsubRenderEvidence.filter((entry) => entry.status === "pending");
+    console.log(`${workbook.device.deviceClass}: ${workbook.cases.length - pending.length}/${workbook.cases.length} cases passed; ${3 - pendingCaptures.length}/3 VobSub captures recorded.`);
     for (const entry of pending) console.log(entry.id);
+    for (const entry of pendingCaptures) console.log(`vobsub/cue-${entry.cue}`);
     return;
   }
   if (command === "finalize") {
@@ -285,7 +410,7 @@ export function runCli(args = process.argv.slice(2)) {
     console.log("Created physical UAT evidence index from immutable report bytes.");
     return;
   }
-  fail("command must be init, record, status, finalize, or index");
+  fail("command must be init, record, record-vobsub, status, finalize, or index");
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {

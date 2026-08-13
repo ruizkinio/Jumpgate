@@ -8,6 +8,7 @@ import {
   createWorkbook,
   finalizeWorkbook,
   recordPass,
+  recordVobSubCue,
   validateWorkbook,
 } from "../uat-evidence.mjs";
 import {
@@ -15,6 +16,7 @@ import {
   requiredUatCasesForDevice,
   validateEvidence,
 } from "../validate-release.mjs";
+import { evidencePng } from "./png-fixture.mjs";
 
 const candidate = JSON.parse(readFileSync(new URL("../candidate.json", import.meta.url), "utf8"));
 const now = new Date("2026-08-13T12:00:00Z");
@@ -31,6 +33,13 @@ function input(deviceClass = "tv") {
 
 function completedReport(deviceClass) {
   let workbook = createWorkbook(candidate, input(deviceClass), now);
+  for (const cue of [1, 2, 3]) workbook = recordVobSubCue(
+    workbook,
+    candidate,
+    cue,
+    evidencePng(cue + (deviceClass === "tv" ? 10 : 0)),
+    { capturePath: `release/evidence/${deviceClass}-vobsub-cue-${cue}.png`, visualReview: "cue-and-time-rail-confirmed", privacyReview: "sanitized-for-publication" },
+  );
   for (const [index, id] of requiredUatCasesForDevice(deviceClass).entries()) {
     workbook = recordPass(workbook, candidate, id, `Observed expected behavior for policy case ${index + 1}.`);
   }
@@ -44,6 +53,39 @@ test("workbooks bind public candidate artifacts and exact device-scoped policy c
   assert.equal(workbook.device.jumpgateApkSha256, candidate.components.kodi.artifacts["armeabi-v7a"].apkSha256);
   assert.equal(workbook.device.stremioVersionName, candidate.stremio.apps.tv.versionName);
   assert.throws(() => finalizeWorkbook(workbook, candidate, now), /remain pending/);
+});
+
+test("VobSub render evidence requires three bounded PNG captures", () => {
+  let workbook = createWorkbook(candidate, input(), now);
+  assert.throws(
+    () => recordVobSubCue(workbook, candidate, 1, Buffer.from("not a PNG")),
+    /PNG file/,
+  );
+  assert.throws(
+    () => recordVobSubCue(workbook, candidate, 1, evidencePng(1)),
+    /visual-review/,
+  );
+  assert.throws(
+    () => recordVobSubCue(workbook, candidate, 1, evidencePng(1), { capturePath: "elsewhere.png", visualReview: "cue-and-time-rail-confirmed", privacyReview: "sanitized-for-publication" }),
+    /must be read from release\/evidence/,
+  );
+  const review = (cue) => ({ capturePath: `release/evidence/tv-vobsub-cue-${cue}.png`, visualReview: "cue-and-time-rail-confirmed", privacyReview: "sanitized-for-publication" });
+  workbook = recordVobSubCue(workbook, candidate, 1, evidencePng(1), review(1));
+  assert.throws(
+    () => recordVobSubCue(workbook, candidate, 2, evidencePng(1), review(2)),
+    /distinct images/,
+  );
+  assert.throws(
+    () => recordVobSubCue(workbook, candidate, 2, evidencePng(2, [{ type: "tEXt", data: Buffer.from("Account=test") }]), review(2)),
+    /ancillary or private/,
+  );
+  for (const cue of [2, 3]) workbook = recordVobSubCue(workbook, candidate, cue, evidencePng(cue), review(cue));
+  workbook = recordVobSubCue(workbook, candidate, 3, evidencePng(3), review(3));
+  assert.deepEqual(workbook.vobsubRenderEvidence.map(({ cue, status }) => ({ cue, status })), [
+    { cue: 1, status: "pass" },
+    { cue: 2, status: "pass" },
+    { cue: 3, status: "pass" },
+  ]);
 });
 
 test("recording rejects unknown cases and secret-shaped observations", () => {
