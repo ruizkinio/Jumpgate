@@ -85,3 +85,30 @@ failed audit remains reviewable without weakening the zero-unresolved release ga
 observed fingerprint, include a sanitized review rationale, and be unexpired. Missing,
 extra, stale, expired, or unresolved entries fail the protected job. The generated report
 binds the exact allowlist bytes by SHA-256.
+
+## Coordinated Draft Packaging
+
+After both physical reports and `physical-uat.json` are committed, finalize
+`docs/RELEASE_NOTES_DRAFT.md` with exactly one immutable URL to the committed index.
+The URL's commit must be an ancestor of the final coordination commit, and the index
+bytes at that URL must equal the bytes in the final tree.
+
+Configure `coordinated-release-tag` and `coordinated-release-draft` as protected GitHub
+environments restricted to protected branches and requiring a release-owner review.
+Then manually run **Package coordinated release draft** from `main`, entering the exact
+full `main` commit as `coordinated_commit`.
+
+The workflow fails closed in four stages:
+
+1. It runs complete readiness before mutation and downloads only the seven locked Kodi
+   draft assets through a read-only Kodi-scoped token.
+2. It creates or verifies the exact annotated root tag through the first protected
+   environment. It never overwrites or deletes a tag.
+3. It reruns complete readiness after the tag exists, so the public-history audit covers
+   the tag before packaging continues.
+4. It creates or resumes only an exact private root draft through the second protected
+   environment. Every asset is rehashed and the draft body must equal the committed
+   notes. The workflow has no publication operation.
+
+Review the resulting draft, its seven assets, hashes, and rendered notes. Publishing the
+reviewed draft is a separate deliberate release-owner action after all gates remain green.

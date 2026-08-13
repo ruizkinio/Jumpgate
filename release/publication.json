@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 1,
+  "coordinatedVersion": "3.0.0",
+  "tagName": "v3.0.0",
+  "releaseName": "Jumpgate 3.0.0",
+  "releaseNotesPath": "docs/RELEASE_NOTES_DRAFT.md",
+  "source": {
+    "repository": "ruizkinio/Jumpgate-kodi",
+    "releaseId": 369936173,
+    "tagObject": "ed490c7a425b72f6b12386aa6a24aa667a95f064",
+    "tagName": "v3.0.0",
+    "commit": "b105087fb2ec00db4576e2f4b1221f9c45acd84f",
+    "runId": 31699099683,
+    "workflowPath": ".github/workflows/jumpgate-android-release.yml",
+    "assets": [
+      {
+        "id": 513021651,
+        "name": "Jumpgate-22.0-ALPHA2-Jumpgate-3.0.0-arm64-v8a.apk",
+        "size": 75763058,
+        "contentType": "application/vnd.android.package-archive",
+        "sha256": "0ffec97546bf7e946e24826cebd2f98816122f84a03cef8ad208a68d4dac312a",
+        "attested": true
+      },
+      {
+        "id": 513021698,
+        "name": "Jumpgate-22.0-ALPHA2-Jumpgate-3.0.0-arm64-v8a.spdx.json",
+        "size": 2341,
+        "contentType": "application/octet-stream",
+        "sha256": "f8f90ecc93f01ddba7b7bc2c30449f32e0e4f5f0554c20c109920e77ad979935",
+        "attested": true
+      },
+      {
+        "id": 513021716,
+        "name": "Jumpgate-22.0-ALPHA2-Jumpgate-3.0.0-armeabi-v7a.apk",
+        "size": 72674766,
+        "contentType": "application/vnd.android.package-archive",
+        "sha256": "9ff620c0d07f7dffd960a0b7620b30dfcbbdb7efcbe5e969ac719b7d643ab763",
+        "attested": true
+      },
+      {
+        "id": 513021773,
+        "name": "Jumpgate-22.0-ALPHA2-Jumpgate-3.0.0-armeabi-v7a.spdx.json",
+        "size": 2363,
+        "contentType": "application/octet-stream",
+        "sha256": "0e290505e7176891f030609b10962de19990141c675d48981e1ceb11857ceb96",
+        "attested": true
+      },
+      {
+        "id": 513021787,
+        "name": "Jumpgate-22.0-ALPHA2-Jumpgate-3.0.0-metadata.json",
+        "size": 1724,
+        "contentType": "application/octet-stream",
+        "sha256": "4f58536b9a6d3a713aa8252844e9571beb6445acf4e22c004dc55febce072038",
+        "attested": true
+      },
+      {
+        "id": 513021801,
+        "name": "Jumpgate-22.0-ALPHA2-Jumpgate-3.0.0-provenance.json",
+        "size": 12266,
+        "contentType": "application/octet-stream",
+        "sha256": "c6fe765aac2d19765a43bf5507dd6686dffc71468c20e31c96ee879815f2f941",
+        "attested": false
+      },
+      {
+        "id": 513021808,
+        "name": "SHA256SUMS",
+        "size": 596,
+        "contentType": "application/octet-stream",
+        "sha256": "e7665017b5317c5ea2219684681bd0c489b9b3fcadfe5ed21217d88abb150b64",
+        "attested": true
+      }
+    ]
+  }
+}
