@@ -19,6 +19,34 @@ tokens, headers, cookies, provider responses, account names, or pairing codes.
 - Stremio is signed into a dedicated test account on the target device.
 - Trakt and TMDB test accounts/keys contain no unrelated private history.
 
+Use `npm run uat:device -- run` for every ADB operation. The wrapper reads an ignored
+`.uat/physical-targets.json`, refuses emulator/QEMU/loopback targets, sets Android media
+stream `3` to numeric `0`, verifies an unambiguous numeric `0` readback before running
+the requested command, and restores and re-verifies `0` afterward. A missing or failed
+readback blocks the operation; mute state is not evidence of numeric volume `0`.
+
+Enroll each physical target through the same guard. This first sets and verifies numeric
+media volume `0`, rejects virtual-device descriptors and properties, reads the exact
+manufacturer/model, restores and re-verifies `0`, then atomically writes the ignored
+private file. Use `--connect` for wireless ADB serials and `--replace` only when updating
+an existing named target:
+
+```bash
+npm run uat:device -- enroll --target phone --device-class phone \
+  --serial PRIVATE_ADB_SERIAL --connect
+```
+
+Run one bounded device operation at a time so every operation crosses the guard:
+
+```bash
+npm run uat:device -- run --target phone -- shell getprop ro.build.version.sdk
+```
+
+The wrapper accepts only documented UAT-relevant ADB operation and shell-command
+families. Shell interpreters, metacharacters, transport changes, privilege changes,
+reboots, and direct audio mutations are refused. Extend the reviewed allowlist and its
+tests when a release case genuinely requires another operation; do not bypass the guard.
+
 Every bracketed case below is required on both physical device classes unless it is
 explicitly labeled **TV only**. TV-only cases are omitted from the phone workbook and
 must pass in the TV workbook; there is no operator-selected `N/A` status or applicability

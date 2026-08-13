@@ -15,6 +15,9 @@ Use the repository recorder rather than editing evidence JSON by hand. It preloa
 public candidate facts, rejects secret-shaped observations, and refuses to finalize while
 any policy case is pending. Keep workbooks under ignored `.uat/`; never paste logs,
 responses, URLs, pairing data, account labels, or credentials into an observation.
+All ADB operations must use the `uat:device` wrapper documented in `docs/UAT.md`; direct
+ADB commands are not acceptable release evidence because they do not prove numeric media
+volume `0`, physical-device identity, or post-command restoration.
 
 ```bash
 npm run uat:evidence -- init --device-class tv --manufacturer Google \
