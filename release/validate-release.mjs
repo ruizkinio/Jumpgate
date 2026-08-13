@@ -59,14 +59,70 @@ export const COMPONENT_POLICIES = Object.freeze({
     repository: "https://github.com/ruizkinio/Jumpgate-kodi.git",
     branch: "master",
     slug: "ruizkinio/Jumpgate-kodi",
-    workflow: "Jumpgate Android CI",
-    workflowId: 312418811,
-    workflowPath: ".github/workflows/jumpgate-android.yml",
-    event: "push",
+    workflow: "Jumpgate Android Release",
+    workflowId: 321201768,
+    workflowPath: ".github/workflows/jumpgate-android-release.yml",
+    event: "workflow_dispatch",
     auditedFiles: Object.freeze([
       Object.freeze({
         path: ".github/workflows/jumpgate-android.yml",
-        sha256: "f5cb7bca3b60fd7578fe30fd1fde4aff286d05fc77005629af5b6c791934c3b4",
+        sha256: "7a4fc62b629aab57534406c5741f437bf4c28984612f1cac482b5fe560934de7",
+      }),
+      Object.freeze({
+        path: ".github/workflows/jumpgate-android-release.yml",
+        sha256: "2da415e9e4aac890e7a6f3bff388e4de2e674d36282ef1bca71681e0fd98fbc5",
+      }),
+      Object.freeze({
+        path: ".github/workflows/jumpgate-release-reconcile.yml",
+        sha256: "fbaeb4a5e0d1dd8b65d7ea26a3867567c9c3893c24788af3ca18dbf0b9fbd6e2",
+      }),
+      Object.freeze({
+        path: "tools/ci/jumpgate/test-android-branding.py",
+        sha256: "681283b47bb457086ef9fc7b8ed838164a2f8c047433e58e96036bb38a595812",
+      }),
+      Object.freeze({
+        path: "tools/ci/jumpgate/test-jumpgate-android-release-workflow.py",
+        sha256: "51622fcf737cb9b97df6e6d1697598623272caeb19f4b2ca6c873fee95b7a915",
+      }),
+      Object.freeze({
+        path: "tools/ci/jumpgate/test-jumpgate-release-reconcile-workflow.py",
+        sha256: "497212eea13f62412f264a1a664f82ec3552573fd634b6c2b15f05a89a6aa659",
+      }),
+      Object.freeze({
+        path: "tools/ci/jumpgate/test-manager-addon.py",
+        sha256: "057cccb48f3cef60f382f8b926f1820fc0e2c6fb61adfd80ea16f9c12437cf4f",
+      }),
+      Object.freeze({
+        path: "tools/ci/jumpgate/test-verify-android-apk.sh",
+        sha256: "2dbd5554946956b819ed3c04c274ff0383d7f5f79516d068b9b753ef068f6eba",
+      }),
+      Object.freeze({
+        path: "tools/ci/jumpgate/test-verify-android-python-runtime.py",
+        sha256: "2201bf08bac2c1804542abecb6399a2443a43b7571f724704acb0e333ddfb984",
+      }),
+      Object.freeze({
+        path: "tools/ci/jumpgate/test-verify-android-release.sh",
+        sha256: "6be01385d237f47c013df4647b0c6d355d33cce7c1ac9392682b18296e3e7520",
+      }),
+      Object.freeze({
+        path: "tools/ci/jumpgate/test-verify-shairplay-crypto-symbols.sh",
+        sha256: "36aec1fba5efa1b1aab13dd982ae41511010cc0e89e4293d125050158fe26de6",
+      }),
+      Object.freeze({
+        path: "tools/ci/jumpgate/verify-android-apk.sh",
+        sha256: "f9049f1ff977ac4b99241e4e33ed58fb1f6a0b05216b7a46dd94ba272e56a8f4",
+      }),
+      Object.freeze({
+        path: "tools/ci/jumpgate/verify-android-python-runtime.py",
+        sha256: "bd5f58f4e628ef20c3414f84c2244cf640721009e56e0507ea05d21cb4146a82",
+      }),
+      Object.freeze({
+        path: "tools/ci/jumpgate/verify-android-release.sh",
+        sha256: "e3225a51f07960ac099a4cc255fb061a98c2085e1d43e3fe496657ae49c710a5",
+      }),
+      Object.freeze({
+        path: "tools/ci/jumpgate/verify-shairplay-crypto-symbols.sh",
+        sha256: "53d88fe3fc957c2b245a501ddeeafd8f1d45a951721b703b960f1bdfab8daa90",
       }),
     ]),
     reviewedHistory: Object.freeze({
@@ -78,7 +134,7 @@ export const COMPONENT_POLICIES = Object.freeze({
       finalBaseBranch: "release/clean-history-v3",
       cleanAnchor: "d48dbc6df68826c39636a511a8d08496134d98a7",
       protectedBranch: "master",
-      postCleanPullRequests: Object.freeze([7, 8, 10, 11, 12, 13, 14, 15]),
+      postCleanPullRequests: Object.freeze([7, 8, 10, 11, 12, 13, 14, 15, 16]),
     }),
   }),
 });
@@ -109,8 +165,8 @@ export const KODI_RELEASE_POLICY = Object.freeze({
     versionName: "22.0-ALPHA2-Jumpgate-3.0.0",
   }),
   signer: Object.freeze({
-    state: "not-yet-provisioned",
-    certificateSha256: null,
+    state: "provisioned",
+    certificateSha256: "10625572b5f34c5125b030dd5ab5fd40bdcd263d0fa8e2073ddee70435970551",
   }),
 });
 

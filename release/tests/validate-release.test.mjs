@@ -52,7 +52,13 @@ const TEST_RELEASE_SIGNER_POLICY = Object.freeze({
 });
 
 function candidate() {
-  return structuredClone(CANDIDATE_TEMPLATE);
+  const value = structuredClone(CANDIDATE_TEMPLATE);
+  Object.assign(value.components.kodi.provenance, {
+    workflowId: COMPONENT_POLICIES.kodi.workflowId,
+    workflowPath: COMPONENT_POLICIES.kodi.workflowPath,
+    event: COMPONENT_POLICIES.kodi.event,
+  });
+  return value;
 }
 
 function physicalEvidence() {
@@ -277,8 +283,8 @@ test("candidate metadata cannot override release security policy", () => {
   );
   assert.equal(KODI_RELEASE_POLICY.apkManifest.applicationId, "io.github.ruizkinio.jumpgate");
   assert.deepEqual(KODI_RELEASE_POLICY.signer, {
-    state: "not-yet-provisioned",
-    certificateSha256: null,
+    state: "provisioned",
+    certificateSha256: "10625572b5f34c5125b030dd5ab5fd40bdcd263d0fa8e2073ddee70435970551",
   });
 
   const unsupportedMobile = candidate();
@@ -359,10 +365,10 @@ test("only ancestor or identical commits satisfy public reachability", () => {
 
 test("rewritten Kodi history requires the exact clean anchor and protected PR chain", () => {
   const history = COMPONENT_POLICIES.kodi.reviewedHistory;
-  const mergeShas = ["7", "8", "9", "a", "b", "c", "d", "e"].map((value) =>
+  const mergeShas = ["7", "8", "9", "a", "b", "c", "d", "e", "f"].map((value) =>
     value.repeat(40),
   );
-  const headShas = ["f", "1", "2", "3", "4", "5", "6", "7"].map((value) =>
+  const headShas = ["0", "1", "2", "3", "4", "5", "6", "7", "8"].map((value) =>
     value.repeat(40),
   );
   const component = { commit: mergeShas.at(-1) };
@@ -1058,7 +1064,7 @@ test("readiness derives every publication proof independently", () => {
     }),
     [
       "required component review/history proofs are incomplete: Kodi#5",
-      "the Kodi release signer is explicitly not yet provisioned; current APKs are ephemeral",
+      "the locked APK bytes, manifests, and signing certificates have not been independently verified",
       "the deployed Bridge digest lacks a candidate-bound deployment attestation artifact",
       "the locked Stremio APK bytes, manifests, ABI sets, and signing certificate have not been independently verified",
       "sanitized physical phone and TV UAT evidence is absent",
