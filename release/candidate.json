@@ -5,51 +5,51 @@
     "bridge": {
       "repository": "https://github.com/ruizkinio/Jumpgate-bridge.git",
       "branch": "main",
-      "commit": "21b3fbd6487fc7c353727b77883aa3cfc0a49e76",
-      "imageDigest": "sha256:5196797aea9943fffd87ceede8fe1b0a37b008498918f10e5898d9502e59607c",
+      "commit": "1a37c36095cbd933af955936928ac3fd370e8206",
+      "imageDigest": "sha256:7933c6ced7b5d086f833238af77a10cc0208454c3159cbb92599d856a498a2fd",
       "provenance": {
-        "runUrl": "https://github.com/ruizkinio/Jumpgate-bridge/actions/runs/30515845255",
+        "runUrl": "https://github.com/ruizkinio/Jumpgate-bridge/actions/runs/30732389986",
         "workflowId": 320575057,
         "workflowPath": ".github/workflows/fly-deploy.yml",
         "event": "push",
         "branch": "main",
         "headRepository": "ruizkinio/Jumpgate-bridge",
         "imageArtifact": {
-          "id": 8748860682,
-          "name": "jumpgate-image-21b3fbd6487fc7c353727b77883aa3cfc0a49e76",
-          "archiveDigest": "sha256:4baff6ed18da301de773b0bb8aab827e257891b95c7c6f10a4951638c1147f16"
+          "id": 8828411933,
+          "name": "jumpgate-image-1a37c36095cbd933af955936928ac3fd370e8206",
+          "archiveDigest": "sha256:7933c6ced7b5d086f833238af77a10cc0208454c3159cbb92599d856a498a2fd"
         },
         "deploymentAttestationArtifact": {
-          "id": 8749019097,
-          "name": "jumpgate-deployment-attestation-30515845255-1-21b3fbd6487fc7c353727b77883aa3cfc0a49e76",
-          "archiveDigest": "sha256:ad7b9a4578df6e169aefc7eeae684cdac2d8e4cd1d56d03f6e5d8a8a4b55e195"
+          "id": 8828488918,
+          "name": "jumpgate-deployment-attestation-30732389986-1-1a37c36095cbd933af955936928ac3fd370e8206",
+          "archiveDigest": "sha256:c7f2959784c53332b774833fd06dda9d4e614e7b5168cadcd79b00fc865f69b2"
         }
       }
     },
     "kodi": {
       "repository": "https://github.com/ruizkinio/Jumpgate-kodi.git",
       "branch": "master",
-      "commit": "35bf6b23f84faff14e9372abe0e6f2fcbb153617",
+      "commit": "9cd5a416595825dccff0ac6f107f7217b9744e5e",
       "provenance": {
-        "runUrl": "https://github.com/ruizkinio/Jumpgate-kodi/actions/runs/30253147375",
-        "workflowId": 312418811,
-        "workflowPath": ".github/workflows/jumpgate-android.yml",
-        "event": "push",
+        "runUrl": "https://github.com/ruizkinio/Jumpgate-kodi/actions/runs/31670207947",
+        "workflowId": 321201768,
+        "workflowPath": ".github/workflows/jumpgate-android-release.yml",
+        "event": "workflow_dispatch",
         "branch": "master",
         "headRepository": "ruizkinio/Jumpgate-kodi"
       },
       "artifacts": {
         "arm64-v8a": {
-          "artifactId": 8648051513,
-          "artifactName": "jumpgate-android-ci-ephemeral-signed-arm64-v8a-35bf6b23f84faff14e9372abe0e6f2fcbb153617",
-          "archiveDigest": "sha256:844bea2f2e7bfca9047b2df57fc88fe66f73b32154881b4d0c9d0b2b853ea0b3",
-          "apkSha256": "09ed1913468502f948f6380b844d229ee960a169921378827395a4ecd0794b52"
+          "artifactId": 9171387799,
+          "artifactName": "jumpgate-android-release-signed-arm64-v8a-31670207947-1",
+          "archiveDigest": "sha256:f19a9af0b4f999606281623aa04b7d243a34fab6c58a252aa5acc9a17d68d3d4",
+          "apkSha256": "5e1f43083d2a0fdd9e858131f2197c9af984114909cac0ad8432c6ba6ecb9c7e"
         },
         "armeabi-v7a": {
-          "artifactId": 8648027227,
-          "artifactName": "jumpgate-android-ci-ephemeral-signed-armeabi-v7a-35bf6b23f84faff14e9372abe0e6f2fcbb153617",
-          "archiveDigest": "sha256:3d3a4424400133a6ac8cd1824028b40168002365dfd8838819133f650fc025ea",
-          "apkSha256": "c348de59478d51e68e2f556c64f399714df5fc179c965bfbe85084fe995d1905"
+          "artifactId": 9171388819,
+          "artifactName": "jumpgate-android-release-signed-armeabi-v7a-31670207947-1",
+          "archiveDigest": "sha256:b531d615b6816cebac91e226682957ee7c12a03e9190606c24f23db994494751",
+          "apkSha256": "f30a7edfccaa7b70f2c915f747856a2e619396e005b41cbbd93ed8a66150c798"
         }
       }
     }
