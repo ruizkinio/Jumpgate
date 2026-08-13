@@ -5,11 +5,11 @@ candidate is locked to these public component commits:
 
 | Input | Public branch | Candidate commit |
 | --- | --- | --- |
-| Bridge | `Jumpgate-bridge/main` | `1a37c36095cbd933af955936928ac3fd370e8206` |
-| Kodi | `Jumpgate-kodi/master` | `9cd5a416595825dccff0ac6f107f7217b9744e5e` |
+| Bridge | `Jumpgate-bridge/main` | `28848c13ae515c651e267e1f1ab9f24ebabd168c` |
+| Kodi | `Jumpgate-kodi/master` | `b105087fb2ec00db4576e2f4b1221f9c45acd84f` |
 
 The Bridge is deployed at immutable image digest
-`sha256:7d6c712efebdfcdf0c2d5136d5fb4cfe998f81a0e86d41b0536fd7a352498319`.
+`sha256:05e9d5a79aaff27a81b61f548bef78933ec541d5af59b1d1f2bcb2cc3ca17b6a`.
 Protected deployment provenance and live health checks pass for that digest.
 
 Kodi's protected stable release workflow produced signed `arm64-v8a` and
@@ -24,10 +24,13 @@ physical UAT passes.
 - Bridge deployment attestation, live image digest, `/health/live`, `/health/ready`,
   and `/version` pass.
 - Kodi host tests and both Android ABI builds pass protected CI.
-- The reproducible public-history audit in protected run `31677146399` reports zero
-  unresolved findings. One exact Kodi scanner false positive is narrowly allowlisted
-  with a sanitized rationale and expiry; stale, unused, expired, or unresolved entries
-  still fail the release gate.
+- The reproducible public-history audit in protected run `31706953795` reports zero
+  unresolved findings. That run also independently verified the final Jumpgate and
+  Stremio APKs, Bridge deployment provenance, live Bridge state, and current GitHub
+  security state; it refused release only because physical UAT evidence is absent.
+  One exact Kodi scanner false positive is narrowly allowlisted with a sanitized
+  rationale and expiry; stale, unused, expired, or unresolved entries still fail the
+  release gate.
 
 ## Remaining Blocker
 
@@ -46,8 +49,8 @@ Until both immutable sanitized reports are committed and protected
 
 | ABI | APK SHA-256 |
 | --- | --- |
-| `arm64-v8a` | `5e1f43083d2a0fdd9e858131f2197c9af984114909cac0ad8432c6ba6ecb9c7e` |
-| `armeabi-v7a` | `f30a7edfccaa7b70f2c915f747856a2e619396e005b41cbbd93ed8a66150c798` |
+| `arm64-v8a` | `0ffec97546bf7e946e24826cebd2f98816122f84a03cef8ad208a68d4dac312a` |
+| `armeabi-v7a` | `9ff620c0d07f7dffd960a0b7620b30dfcbbdb7efcbe5e969ac719b7d643ab763` |
 
 Both APKs use signing-certificate SHA-256
 `10625572b5f34c5125b030dd5ab5fd40bdcd263d0fa8e2073ddee70435970551`.
