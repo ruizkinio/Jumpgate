@@ -377,7 +377,8 @@ test("enrollment rejects private target files outside ignored .uat", () => {
 });
 
 test("ADB executable discovery is deterministic and fails when unavailable", () => {
-  const expected = resolve("C:/sdk/platform-tools/adb.exe");
+  const adbName = process.platform === "win32" ? "adb.exe" : "adb";
+  const expected = resolve("C:/sdk", "platform-tools", adbName);
   assert.equal(
     resolveAdbExecutable({ ANDROID_HOME: "C:/sdk", PATH: "" }, (path) => path === expected),
     expected,
