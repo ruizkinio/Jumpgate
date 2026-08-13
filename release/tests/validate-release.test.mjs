@@ -1162,6 +1162,45 @@ test("release workflow is pinned, main-only, fixed-runner, and non-publishing", 
   assert.equal((workflow.match(/^\s*cache: npm$/gm) ?? []).length, 2);
 });
 
+test("coordinated packaging workflow is manual, split-authority, and draft-only", () => {
+  const workflow = readFileSync(
+    new URL("../../.github/workflows/package-coordinated-release.yml", import.meta.url),
+    "utf8",
+  ).replace(/\r\n/g, "\n");
+  const uses = [...workflow.matchAll(/^\s*uses:\s*([^\s#]+)/gm)].map((match) => match[1]);
+  assert.ok(uses.length >= 12);
+  assert.ok(uses.every((value) => /@[0-9a-f]{40}$/.test(value)));
+  assert.match(workflow, /^on:\n  workflow_dispatch:\n/m);
+  assert.doesNotMatch(workflow, /^  (?:push|pull_request|release|schedule):/m);
+  assert.match(workflow, /REQUESTED_COMMIT: \$\{\{ inputs\.coordinated_commit \}\}/);
+  assert.match(workflow, /\[ "\$GITHUB_REF" != "refs\/heads\/main" \]/);
+  assert.match(workflow, /\[ "\$REQUESTED_COMMIT" != "\$GITHUB_SHA" \]/);
+  assert.equal((workflow.match(/runs-on: ubuntu-24\.04/g) ?? []).length, 4);
+  assert.match(workflow, /preflight:[\s\S]*?permissions:\n      contents: read/);
+  assert.match(workflow, /create-tag:[\s\S]*?environment: coordinated-release-tag[\s\S]*?contents: write/);
+  assert.match(workflow, /create-draft:[\s\S]*?environment: coordinated-release-draft[\s\S]*?contents: write/);
+  assert.match(workflow, /create-tag:[\s\S]*?needs: preflight/);
+  assert.match(workflow, /audit-tag:[\s\S]*?needs: create-tag/);
+  assert.match(workflow, /create-draft:[\s\S]*?needs: audit-tag/);
+  assert.equal((workflow.match(/node release\/validate-release\.mjs --require-ready/g) ?? []).length, 2);
+  assert.equal((workflow.match(/node release\/package-release\.mjs check-inputs "\$GITHUB_SHA"/g) ?? []).length, 4);
+  assert.equal((workflow.match(/node release\/package-release\.mjs create-tag "\$GITHUB_SHA"/g) ?? []).length, 1);
+  assert.equal((workflow.match(/node release\/package-release\.mjs create-draft "\$GITHUB_SHA" \.release\/payload/g) ?? []).length, 1);
+  assert.equal((workflow.match(/SOURCE_GITHUB_TOKEN:/g) ?? []).length, 1);
+  assert.equal((workflow.match(/ROOT_GITHUB_TOKEN:/g) ?? []).length, 2);
+  assert.doesNotMatch(
+    workflow,
+    /write-all|packages:\s*write|id-token:\s*write|delete|make_latest:\s*true|draft:\s*false|gh release|publish release|release-action/i,
+  );
+  const sourceJob = workflow.match(/  preflight:[\s\S]*?(?=\n  create-tag:)/)?.[0] ?? "";
+  assert.match(sourceJob, /SOURCE_GITHUB_TOKEN:/);
+  assert.doesNotMatch(sourceJob, /ROOT_GITHUB_TOKEN:|contents: write/);
+  const tagJob = workflow.match(/  create-tag:[\s\S]*?(?=\n  audit-tag:)/)?.[0] ?? "";
+  const draftJob = workflow.match(/  create-draft:[\s\S]*$/)?.[0] ?? "";
+  assert.doesNotMatch(tagJob, /SOURCE_GITHUB_TOKEN:|permission-attestations:/);
+  assert.doesNotMatch(draftJob, /SOURCE_GITHUB_TOKEN:|permission-attestations:/);
+});
+
 test("release validator has no obsolete Stremio Web provenance dependency", () => {
   const packageJson = JSON.parse(
     readFileSync(new URL("../../package.json", import.meta.url), "utf8"),

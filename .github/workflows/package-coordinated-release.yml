@@ -1,0 +1,216 @@
+name: Package coordinated release draft
+
+run-name: Package coordinated release draft at ${{ inputs.coordinated_commit }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      coordinated_commit:
+        description: Full main commit containing final UAT evidence and release notes
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jumpgate-coordinated-release-v3
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    name: Verify readiness and prepare exact payload
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    steps:
+      - name: Refuse non-main or stale dispatch input
+        env:
+          REQUESTED_COMMIT: ${{ inputs.coordinated_commit }}
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/main" ] || [ "$REQUESTED_COMMIT" != "$GITHUB_SHA" ]; then
+            echo "This workflow requires the exact current main commit." >&2
+            exit 1
+          fi
+      - name: Check out exact coordination commit
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Use Node 24
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install locked release dependencies
+        run: npm ci
+      - name: Refuse stale or unfinished release inputs
+        run: node release/package-release.mjs check-inputs "$GITHUB_SHA"
+      - name: Install pinned Android signing verifier
+        uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
+        with:
+          packages: build-tools;36.0.0
+      - name: Reproduce sanitized public-history audit
+        run: npm run audit:security
+      - name: Refuse unresolved or stale security findings
+        run: npm run audit:security:require-clean
+      - name: Mint bounded cross-repository audit token
+        id: audit-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.1
+        with:
+          client-id: ${{ secrets.JUMPGATE_AUDIT_APP_CLIENT_ID }}
+          private-key: ${{ secrets.JUMPGATE_AUDIT_APP_PRIVATE_KEY }}
+          owner: ruizkinio
+          repositories: |
+            Jumpgate
+            Jumpgate-bridge
+            Jumpgate-kodi
+          permission-actions: read
+          permission-attestations: read
+          permission-contents: read
+          permission-metadata: read
+          permission-secret-scanning-alerts: read
+          permission-security-events: read
+      - name: Refuse without complete proof
+        env:
+          GITHUB_TOKEN: ${{ steps.audit-token.outputs.token }}
+        run: node release/validate-release.mjs --require-ready
+      - name: Mint Kodi-only source token
+        id: source-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.1
+        with:
+          client-id: ${{ secrets.JUMPGATE_AUDIT_APP_CLIENT_ID }}
+          private-key: ${{ secrets.JUMPGATE_AUDIT_APP_PRIVATE_KEY }}
+          owner: ruizkinio
+          repositories: Jumpgate-kodi
+          permission-attestations: read
+          permission-contents: read
+          permission-metadata: read
+      - name: Download and verify the locked Kodi draft assets
+        env:
+          SOURCE_GITHUB_TOKEN: ${{ steps.source-token.outputs.token }}
+          GH_TOKEN: ${{ steps.source-token.outputs.token }}
+        run: node release/package-release.mjs prepare .release/payload
+      - name: Preserve only the verified release payload
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: coordinated-release-payload-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .release/payload
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
+
+  create-tag:
+    name: Create exact annotated release tag
+    needs: preflight
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: coordinated-release-tag
+    permissions:
+      contents: write
+    steps:
+      - name: Check out exact coordination commit
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Use Node 24
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install locked release dependencies
+        run: npm ci
+      - name: Revalidate exact release inputs
+        run: node release/package-release.mjs check-inputs "$GITHUB_SHA"
+      - name: Create or verify only the workflow-owned annotated tag
+        env:
+          ROOT_GITHUB_TOKEN: ${{ github.token }}
+        run: node release/package-release.mjs create-tag "$GITHUB_SHA"
+
+  audit-tag:
+    name: Re-audit complete public history after tag creation
+    needs: create-tag
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    steps:
+      - name: Check out exact coordination commit
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Use Node 24
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install locked release dependencies
+        run: npm ci
+      - name: Revalidate exact release inputs
+        run: node release/package-release.mjs check-inputs "$GITHUB_SHA"
+      - name: Install pinned Android signing verifier
+        uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
+        with:
+          packages: build-tools;36.0.0
+      - name: Reproduce sanitized public-history audit including the release tag
+        run: npm run audit:security
+      - name: Refuse unresolved or stale security findings
+        run: npm run audit:security:require-clean
+      - name: Mint bounded cross-repository audit token
+        id: audit-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.1
+        with:
+          client-id: ${{ secrets.JUMPGATE_AUDIT_APP_CLIENT_ID }}
+          private-key: ${{ secrets.JUMPGATE_AUDIT_APP_PRIVATE_KEY }}
+          owner: ruizkinio
+          repositories: |
+            Jumpgate
+            Jumpgate-bridge
+            Jumpgate-kodi
+          permission-actions: read
+          permission-attestations: read
+          permission-contents: read
+          permission-metadata: read
+          permission-secret-scanning-alerts: read
+          permission-security-events: read
+      - name: Refuse without complete post-tag proof
+        env:
+          GITHUB_TOKEN: ${{ steps.audit-token.outputs.token }}
+        run: node release/validate-release.mjs --require-ready
+
+  create-draft:
+    name: Create exact non-public coordinated draft
+    needs: audit-tag
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: coordinated-release-draft
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - name: Check out exact coordination commit
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Use Node 24
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install locked release dependencies
+        run: npm ci
+      - name: Revalidate exact release inputs
+        run: node release/package-release.mjs check-inputs "$GITHUB_SHA"
+      - name: Restore exact verified payload from this workflow run
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: coordinated-release-payload-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .release/payload
+      - name: Create or resume only the exact private coordinated draft
+        env:
+          ROOT_GITHUB_TOKEN: ${{ github.token }}
+        run: node release/package-release.mjs create-draft "$GITHUB_SHA" .release/payload
