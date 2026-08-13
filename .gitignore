@@ -1,5 +1,6 @@
 # Local artifacts
 .planning/
+/.uat/
 /release/evidence/security-audit.json
 *.apk
 *_logcat*.txt

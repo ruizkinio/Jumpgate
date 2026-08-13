@@ -8,6 +8,35 @@ deployed Bridge image digest, candidate commits, and every UAT section. Phone ev
 must use the locked Mobile baseline; TV evidence must use the locked Android TV baseline.
 Evidence expires after 30 days.
 
+Use the repository recorder rather than editing evidence JSON by hand. It preloads only
+public candidate facts, rejects secret-shaped observations, and refuses to finalize while
+any policy case is pending. Keep workbooks under ignored `.uat/`; never paste logs,
+responses, URLs, pairing data, account labels, or credentials into an observation.
+
+```bash
+npm run uat:evidence -- init --device-class tv --manufacturer Google \
+  --model "Google TV Streamer" --android-api 35 --abi armeabi-v7a \
+  --output .uat/tv.json
+npm run uat:evidence -- record --workbook .uat/tv.json \
+  --case lifecycle/start-first-frames \
+  --observation "First rendered frames appeared and playback remained responsive."
+npm run uat:evidence -- status --workbook .uat/tv.json
+npm run uat:evidence -- finalize --workbook .uat/tv.json \
+  --output release/evidence/tv.json
+```
+
+Commit the finalized phone and TV reports first. In a second commit, build
+`physical-uat.json` using immutable blob URLs at that first commit SHA:
+
+```bash
+npm run uat:evidence -- index \
+  --phone-report release/evidence/phone.json \
+  --phone-url https://github.com/ruizkinio/Jumpgate/blob/FULL_SHA/release/evidence/phone.json \
+  --tv-report release/evidence/tv.json \
+  --tv-url https://github.com/ruizkinio/Jumpgate/blob/FULL_SHA/release/evidence/tv.json \
+  --output release/evidence/physical-uat.json
+```
+
 `evidenceUrl` must be an immutable public blob URL in a Jumpgate repository at a full
 commit SHA. The validator downloads that blob and verifies `evidenceSha256`; issue pages,
 branch URLs, expiring Action artifacts, query strings, and fragments are rejected. Serial
