@@ -591,13 +591,13 @@ test("audited component executable closures are exact and reject byte or policy 
     COMPONENT_POLICIES.bridge.auditedFiles.map(({ path, sha256 }) => ({ path, sha256 })),
     [
       [".github/workflows/fly-deploy.yml", "2cda1aca12ff4a1a3b3e2f45c157660c21d1e212a6f32583551fbddddb55ddff"],
-      ["scripts/ci/fly-managed-rollout.js", "22b4a4bfc743338b4e5e77ee1ed7bc99154f04c97480e4db65d79d0f86b6676a"],
-      ["scripts/ci/deployment-attestation.js", "4bd85c1a3fd79df54902e2dcbe9666ae6f7524454b059dc78256544ba7a35b29"],
-      ["scripts/ci/http-smoke.js", "56973160a349928c37af73a736ab642cdb431ce7667b72cab1a59585335682db"],
-      ["package.json", "5b721beb820020ca16c76e8f010b1a4bfbc219e4d4d85fcb668fb4eb96277b47"],
-      ["package-lock.json", "dfb23cf3a0816934a366952c0426e66d98ac12a60213b0244c5ed766c6a43be2"],
-      [".npmrc", "2e2d39e051bdae6c7becb72f842fffcb0c9d15f3d24716d4c44dac462cdd5d8c"],
-      ["fly.toml", "305a76fb8e6b45749ad0f464b52c763413fc01e42d15d2fc68c3ccc306dc2e99"],
+      ["scripts/ci/fly-managed-rollout.js", "9cc954b815c012130e636f9fc2944873561efe7d1b3cf9f1bb7068f9cee7245f"],
+      ["scripts/ci/deployment-attestation.js", "8bdd29ef1c9ae853bf90ed438f39d1083ea05526779e553971833ee00c87ffc0"],
+      ["scripts/ci/http-smoke.js", "c1a658a8e17d4eed4041c71ac8834fe9ef254a59c9f075a81b10cdd83a223ff0"],
+      ["package.json", "0afead6fde8d3ed72e8f98d49f2883ef10d3917cbf646ce7a8828c1cdbe05d51"],
+      ["package-lock.json", "00e73f23ee5363e2e753d81e28cba047bc8bce7ba5a360be00608b792dd18016"],
+      [".npmrc", "89570b4333de5a4920e113d299e774c671b4e83ebfe34757ad27c3960a7bd269"],
+      ["fly.toml", "723cfbe7a912d2d2bd0b70f7e113d6e676349825a5a875d250a891a09dc05c99"],
     ].map(([path, sha256]) => ({ path, sha256 })),
   );
 });
