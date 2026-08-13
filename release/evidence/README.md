@@ -4,9 +4,12 @@
 physical ARM phone and TV testing. The validator accepts exactly one record for each
 device class. Each record binds device model/API/ABI, the candidate's ABI-specific APK
 and signer hashes, the exact device-class and ABI-specific Stremio APK and signer, the
-deployed Bridge image digest, candidate commits, and every UAT section. Phone evidence
-must use the locked Mobile baseline; TV evidence must use the locked Android TV baseline.
-Evidence expires after 30 days.
+deployed Bridge image digest, candidate commits, and every device-applicable UAT case.
+Shared cases must pass on both devices. Cases explicitly labeled **TV only** in
+`docs/UAT.md` are excluded from the phone workbook and required on TV. There is no
+operator-selected `N/A` escape hatch, and the strict phone/TV policy union covers the
+complete protocol. Phone evidence must use the locked Mobile baseline; TV evidence must
+use the locked Android TV baseline. Evidence expires after 30 days.
 
 Use the repository recorder rather than editing evidence JSON by hand. It preloads only
 public candidate facts, rejects secret-shaped observations, and refuses to finalize while

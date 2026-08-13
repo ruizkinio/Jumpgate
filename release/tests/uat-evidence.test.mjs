@@ -10,7 +10,11 @@ import {
   recordPass,
   validateWorkbook,
 } from "../uat-evidence.mjs";
-import { REQUIRED_UAT_CASES, validateEvidence } from "../validate-release.mjs";
+import {
+  REQUIRED_UAT_CASES,
+  requiredUatCasesForDevice,
+  validateEvidence,
+} from "../validate-release.mjs";
 
 const candidate = JSON.parse(readFileSync(new URL("../candidate.json", import.meta.url), "utf8"));
 const now = new Date("2026-08-13T12:00:00Z");
@@ -27,16 +31,16 @@ function input(deviceClass = "tv") {
 
 function completedReport(deviceClass) {
   let workbook = createWorkbook(candidate, input(deviceClass), now);
-  for (const [index, id] of REQUIRED_UAT_CASES.entries()) {
+  for (const [index, id] of requiredUatCasesForDevice(deviceClass).entries()) {
     workbook = recordPass(workbook, candidate, id, `Observed expected behavior for policy case ${index + 1}.`);
   }
   return finalizeWorkbook(workbook, candidate, now);
 }
 
-test("workbooks bind public candidate artifacts and every policy case", () => {
+test("workbooks bind public candidate artifacts and exact device-scoped policy cases", () => {
   const workbook = createWorkbook(candidate, input(), now);
   assert.equal(validateWorkbook(workbook, candidate), workbook);
-  assert.equal(workbook.cases.length, REQUIRED_UAT_CASES.length);
+  assert.deepEqual(workbook.cases.map(({ id }) => id), requiredUatCasesForDevice("tv"));
   assert.equal(workbook.device.jumpgateApkSha256, candidate.components.kodi.artifacts["armeabi-v7a"].apkSha256);
   assert.equal(workbook.device.stremioVersionName, candidate.stremio.apps.tv.versionName);
   assert.throws(() => finalizeWorkbook(workbook, candidate, now), /remain pending/);
@@ -44,7 +48,10 @@ test("workbooks bind public candidate artifacts and every policy case", () => {
 
 test("recording rejects unknown cases and secret-shaped observations", () => {
   const workbook = createWorkbook(candidate, input(), now);
-  assert.throws(() => recordPass(workbook, candidate, "unknown/case", "Observed pass."), /unknown UAT case/);
+  assert.throws(
+    () => recordPass(workbook, candidate, "unknown/case", "Observed pass."),
+    /not required for tv/,
+  );
   for (const text of [
     "Observed https://private.example/path.",
     "Observed bearer value.",
@@ -55,6 +62,21 @@ test("recording rejects unknown cases and secret-shaped observations", () => {
   ]) {
     assert.throws(() => assertSanitizedObservation(text), /must not contain/);
   }
+});
+
+test("phone workbooks cannot claim TV-only observations", () => {
+  const workbook = createWorkbook(candidate, input("phone"), now);
+  const tvOnly = "lifecycle/stremio-tv-premium-profile-return";
+  assert.equal(workbook.cases.some(({ id }) => id === tvOnly), false);
+  assert.equal(workbook.cases.length, REQUIRED_UAT_CASES.length - 2);
+  assert.throws(
+    () => recordPass(workbook, candidate, tvOnly, "Observed pass."),
+    /not required for phone/,
+  );
+
+  const oldSchema = structuredClone(workbook);
+  oldSchema.schemaVersion = 1;
+  assert.throws(() => validateWorkbook(oldSchema, candidate), /unsupported workbook schemaVersion/);
 });
 
 test("completed reports and immutable index pass the release validators", () => {
