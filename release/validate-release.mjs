@@ -20,39 +20,39 @@ export const COMPONENT_POLICIES = Object.freeze({
     auditedFiles: Object.freeze([
       Object.freeze({
         path: ".github/workflows/fly-deploy.yml",
-        sha256: "a4998b4064cf98c5bba6bd8cfeb782e53a66a77a2c126049701dd5e1870599eb",
+        sha256: "2cda1aca12ff4a1a3b3e2f45c157660c21d1e212a6f32583551fbddddb55ddff",
       }),
       Object.freeze({
         path: "scripts/ci/fly-managed-rollout.js",
-        sha256: "9cc954b815c012130e636f9fc2944873561efe7d1b3cf9f1bb7068f9cee7245f",
+        sha256: "22b4a4bfc743338b4e5e77ee1ed7bc99154f04c97480e4db65d79d0f86b6676a",
       }),
       Object.freeze({
         path: "scripts/ci/deployment-attestation.js",
-        sha256: "8bdd29ef1c9ae853bf90ed438f39d1083ea05526779e553971833ee00c87ffc0",
+        sha256: "4bd85c1a3fd79df54902e2dcbe9666ae6f7524454b059dc78256544ba7a35b29",
       }),
       Object.freeze({
         path: "scripts/ci/http-smoke.js",
-        sha256: "c1a658a8e17d4eed4041c71ac8834fe9ef254a59c9f075a81b10cdd83a223ff0",
+        sha256: "56973160a349928c37af73a736ab642cdb431ce7667b72cab1a59585335682db",
       }),
       Object.freeze({
         path: "package.json",
-        sha256: "49fa6223dfd7424757af071f63b2862dacf39513d85117ddb4e482fc01898841",
+        sha256: "5b721beb820020ca16c76e8f010b1a4bfbc219e4d4d85fcb668fb4eb96277b47",
       }),
       Object.freeze({
         path: "package-lock.json",
-        sha256: "f99690d0f821d8f399aa2c37ddc15722751712e109a3b44c3ba8a92cd3135a91",
+        sha256: "dfb23cf3a0816934a366952c0426e66d98ac12a60213b0244c5ed766c6a43be2",
       }),
       Object.freeze({
         path: ".npmrc",
-        sha256: "89570b4333de5a4920e113d299e774c671b4e83ebfe34757ad27c3960a7bd269",
+        sha256: "2e2d39e051bdae6c7becb72f842fffcb0c9d15f3d24716d4c44dac462cdd5d8c",
       }),
       Object.freeze({
         path: "fly.toml",
-        sha256: "723cfbe7a912d2d2bd0b70f7e113d6e676349825a5a875d250a891a09dc05c99",
+        sha256: "305a76fb8e6b45749ad0f464b52c763413fc01e42d15d2fc68c3ccc306dc2e99",
       }),
     ]),
     requiredPullRequests: Object.freeze([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
     ]),
   }),
   kodi: Object.freeze({
@@ -66,63 +66,63 @@ export const COMPONENT_POLICIES = Object.freeze({
     auditedFiles: Object.freeze([
       Object.freeze({
         path: ".github/workflows/jumpgate-android.yml",
-        sha256: "7a4fc62b629aab57534406c5741f437bf4c28984612f1cac482b5fe560934de7",
+        sha256: "3b689d3ec6abb8925dce9842b31f3e3f4a70fb1df44afc647af0c0083bd71bf1",
       }),
       Object.freeze({
         path: ".github/workflows/jumpgate-android-release.yml",
-        sha256: "2da415e9e4aac890e7a6f3bff388e4de2e674d36282ef1bca71681e0fd98fbc5",
+        sha256: "a12db023549f265358842897468b7c487ee4a1f95e91d076bff17b907874f181",
       }),
       Object.freeze({
         path: ".github/workflows/jumpgate-release-reconcile.yml",
-        sha256: "fbaeb4a5e0d1dd8b65d7ea26a3867567c9c3893c24788af3ca18dbf0b9fbd6e2",
+        sha256: "bdb97285f8d44602829cd468ef386682d5566c8665b422bcc16fa476f03f9b12",
       }),
       Object.freeze({
         path: "tools/ci/jumpgate/test-android-branding.py",
-        sha256: "681283b47bb457086ef9fc7b8ed838164a2f8c047433e58e96036bb38a595812",
+        sha256: "5134ce073fa8ba1b3eb6c95463f8e61a55adca6be4b4f5f3e32a5db6612a4af4",
       }),
       Object.freeze({
         path: "tools/ci/jumpgate/test-jumpgate-android-release-workflow.py",
-        sha256: "51622fcf737cb9b97df6e6d1697598623272caeb19f4b2ca6c873fee95b7a915",
+        sha256: "512d2cdf84781731ac0957f9f0fa96bbbdb25bfa3563fe96186316a5b5c2ffcb",
       }),
       Object.freeze({
         path: "tools/ci/jumpgate/test-jumpgate-release-reconcile-workflow.py",
-        sha256: "497212eea13f62412f264a1a664f82ec3552573fd634b6c2b15f05a89a6aa659",
+        sha256: "ddb8933bbb8a3576abef53a79129d87d9ca44832424c1342f8958e93c8b0b46d",
       }),
       Object.freeze({
         path: "tools/ci/jumpgate/test-manager-addon.py",
-        sha256: "057cccb48f3cef60f382f8b926f1820fc0e2c6fb61adfd80ea16f9c12437cf4f",
+        sha256: "0cb03f10211a81cd1699393f486b2bf4f6a1be9ecca56429b0fffe0fe7a003ad",
       }),
       Object.freeze({
         path: "tools/ci/jumpgate/test-verify-android-apk.sh",
-        sha256: "2dbd5554946956b819ed3c04c274ff0383d7f5f79516d068b9b753ef068f6eba",
+        sha256: "6f5d87f03b9e75d9127c0d505b6c1475a4e743160a49d0d18f2d1b112d1497c4",
       }),
       Object.freeze({
         path: "tools/ci/jumpgate/test-verify-android-python-runtime.py",
-        sha256: "2201bf08bac2c1804542abecb6399a2443a43b7571f724704acb0e333ddfb984",
+        sha256: "eb2776deed3230958fccc82435c63bef8b4cf3600ca10cc958e4b614b13374a5",
       }),
       Object.freeze({
         path: "tools/ci/jumpgate/test-verify-android-release.sh",
-        sha256: "6be01385d237f47c013df4647b0c6d355d33cce7c1ac9392682b18296e3e7520",
+        sha256: "c73715e4bbeda7d509c3c7a1187ae030ee24e1153c382193d13ecfc6b6ac2757",
       }),
       Object.freeze({
         path: "tools/ci/jumpgate/test-verify-shairplay-crypto-symbols.sh",
-        sha256: "36aec1fba5efa1b1aab13dd982ae41511010cc0e89e4293d125050158fe26de6",
+        sha256: "f109940311d2e6a1cc2873c31efc63e6cc5b0c513d59d048642e8c69314b08cc",
       }),
       Object.freeze({
         path: "tools/ci/jumpgate/verify-android-apk.sh",
-        sha256: "f9049f1ff977ac4b99241e4e33ed58fb1f6a0b05216b7a46dd94ba272e56a8f4",
+        sha256: "db7bd0b69a37f88b0963d406f3bc7f2c4df826107e5f3115530cbc9d99d49aa3",
       }),
       Object.freeze({
         path: "tools/ci/jumpgate/verify-android-python-runtime.py",
-        sha256: "bd5f58f4e628ef20c3414f84c2244cf640721009e56e0507ea05d21cb4146a82",
+        sha256: "9c5063c081a3f90450daaa67b6992fca67ea4f7e6889fef3928eda96a321f293",
       }),
       Object.freeze({
         path: "tools/ci/jumpgate/verify-android-release.sh",
-        sha256: "e3225a51f07960ac099a4cc255fb061a98c2085e1d43e3fe496657ae49c710a5",
+        sha256: "0f90b24885f59ad45d9d2f87eed440adec5afdf97dd7b91b34902741c22cc8db",
       }),
       Object.freeze({
         path: "tools/ci/jumpgate/verify-shairplay-crypto-symbols.sh",
-        sha256: "53d88fe3fc957c2b245a501ddeeafd8f1d45a951721b703b960f1bdfab8daa90",
+        sha256: "11f343f7b2084e473c73810536f522e7de20659a4cb81511c7e43b638c2429fe",
       }),
     ]),
     reviewedHistory: Object.freeze({
@@ -134,7 +134,7 @@ export const COMPONENT_POLICIES = Object.freeze({
       finalBaseBranch: "release/clean-history-v3",
       cleanAnchor: "d48dbc6df68826c39636a511a8d08496134d98a7",
       protectedBranch: "master",
-      postCleanPullRequests: Object.freeze([7, 8, 10, 11, 12, 13, 14, 15, 16]),
+      postCleanPullRequests: Object.freeze([7, 8, 10, 11, 12, 13, 14, 15, 16, 17]),
     }),
   }),
 });

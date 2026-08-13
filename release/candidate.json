@@ -5,33 +5,33 @@
     "bridge": {
       "repository": "https://github.com/ruizkinio/Jumpgate-bridge.git",
       "branch": "main",
-      "commit": "1a37c36095cbd933af955936928ac3fd370e8206",
-      "imageDigest": "sha256:7d6c712efebdfcdf0c2d5136d5fb4cfe998f81a0e86d41b0536fd7a352498319",
+      "commit": "28848c13ae515c651e267e1f1ab9f24ebabd168c",
+      "imageDigest": "sha256:05e9d5a79aaff27a81b61f548bef78933ec541d5af59b1d1f2bcb2cc3ca17b6a",
       "provenance": {
-        "runUrl": "https://github.com/ruizkinio/Jumpgate-bridge/actions/runs/30732389986",
+        "runUrl": "https://github.com/ruizkinio/Jumpgate-bridge/actions/runs/31697768697",
         "workflowId": 320575057,
         "workflowPath": ".github/workflows/fly-deploy.yml",
         "event": "push",
         "branch": "main",
         "headRepository": "ruizkinio/Jumpgate-bridge",
         "imageArtifact": {
-          "id": 8828411933,
-          "name": "jumpgate-image-1a37c36095cbd933af955936928ac3fd370e8206",
-          "archiveDigest": "sha256:7933c6ced7b5d086f833238af77a10cc0208454c3159cbb92599d856a498a2fd"
+          "id": 9180010405,
+          "name": "jumpgate-image-28848c13ae515c651e267e1f1ab9f24ebabd168c",
+          "archiveDigest": "sha256:44a64b91982fcacf271ddd2c8567ef42491ac25db7820aa5144e2f1fa02dbc9d"
         },
         "deploymentAttestationArtifact": {
-          "id": 8828488918,
-          "name": "jumpgate-deployment-attestation-30732389986-1-1a37c36095cbd933af955936928ac3fd370e8206",
-          "archiveDigest": "sha256:c7f2959784c53332b774833fd06dda9d4e614e7b5168cadcd79b00fc865f69b2"
+          "id": 9180257108,
+          "name": "jumpgate-deployment-attestation-31697768697-1-28848c13ae515c651e267e1f1ab9f24ebabd168c",
+          "archiveDigest": "sha256:e0f3767582911653c3a937b0409e9fa4c0677f0dfbe15b3bcd30cef193d9490c"
         }
       }
     },
     "kodi": {
       "repository": "https://github.com/ruizkinio/Jumpgate-kodi.git",
       "branch": "master",
-      "commit": "9cd5a416595825dccff0ac6f107f7217b9744e5e",
+      "commit": "b105087fb2ec00db4576e2f4b1221f9c45acd84f",
       "provenance": {
-        "runUrl": "https://github.com/ruizkinio/Jumpgate-kodi/actions/runs/31670207947",
+        "runUrl": "https://github.com/ruizkinio/Jumpgate-kodi/actions/runs/31699099683",
         "workflowId": 321201768,
         "workflowPath": ".github/workflows/jumpgate-android-release.yml",
         "event": "workflow_dispatch",
@@ -40,16 +40,16 @@
       },
       "artifacts": {
         "arm64-v8a": {
-          "artifactId": 9171387799,
-          "artifactName": "jumpgate-android-release-signed-arm64-v8a-31670207947-1",
-          "archiveDigest": "sha256:f19a9af0b4f999606281623aa04b7d243a34fab6c58a252aa5acc9a17d68d3d4",
-          "apkSha256": "5e1f43083d2a0fdd9e858131f2197c9af984114909cac0ad8432c6ba6ecb9c7e"
+          "artifactId": 9182700488,
+          "artifactName": "jumpgate-android-release-signed-arm64-v8a-31699099683-1",
+          "archiveDigest": "sha256:4f3f9d7678ee49294c2921db983fc9b8db41867beb85e5014b19d63dad5f7102",
+          "apkSha256": "0ffec97546bf7e946e24826cebd2f98816122f84a03cef8ad208a68d4dac312a"
         },
         "armeabi-v7a": {
-          "artifactId": 9171388819,
-          "artifactName": "jumpgate-android-release-signed-armeabi-v7a-31670207947-1",
-          "archiveDigest": "sha256:b531d615b6816cebac91e226682957ee7c12a03e9190606c24f23db994494751",
-          "apkSha256": "f30a7edfccaa7b70f2c915f747856a2e619396e005b41cbbd93ed8a66150c798"
+          "artifactId": 9182701951,
+          "artifactName": "jumpgate-android-release-signed-armeabi-v7a-31699099683-1",
+          "archiveDigest": "sha256:dbf4649e748478e4215eca8d05b435ae0702efcd8b585726bdc0b2be33d01d9d",
+          "apkSha256": "9ff620c0d07f7dffd960a0b7620b30dfcbbdb7efcbe5e969ac719b7d643ab763"
         }
       }
     }
